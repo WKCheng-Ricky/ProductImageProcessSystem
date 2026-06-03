@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Watermark Removal - Product Image Processing{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-eraser"></i>
+            Step 2: Watermark Removal
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Remove Text Watermarks & Labels</h5>
+            </div>
+            <div class="card-body">
+                <div id="loading" class="text-center my-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Detecting and removing watermarks...</p>
+                </div>
+
+                <div id="results" class="d-none">
+                    <!-- Status Alert -->
+                    <div id="status-alert" class="alert mb-4">
+                        <i class="bi bi-info-circle"></i>
+                        <strong id="status-message"></strong>
+                    </div>
+
+                    <!-- Before/After Comparison -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-secondary text-white">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-image"></i>
+                                        Original Image
+                                    </h6>
+                                </div>
+                                <div class="card-body text-center">
+                                    <img id="original-image" src="" class="img-fluid rounded" alt="Original Image">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card" id="processed-card">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-check-circle"></i>
+                                        Watermark Removed
+                                    </h6>
+                                </div>
+                                <div class="card-body text-center">
+                                    <img id="processed-image" src="" class="img-fluid rounded" alt="Processed Image">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Watermark Detection Details -->
+                    <div id="watermark-details" class="card mb-4 d-none">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="bi bi-bullseye"></i>
+                                Detected Watermarks
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Location</th>
+                                            <th>Type</th>
+                                            <th>Confidence</th>
+                                            <th>Text</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="watermark-list"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation -->
+                    <div class="d-grid gap-2">
+                        <button id="next-btn" class="btn btn-primary btn-lg">
+                            Next: Split Collage
+                            <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const sessionId = '{{ session_id }}';
+    const apiClient = new APIClient();
+
+    async function removeWatermarks() {
+        try {
+            // Trigger watermark removal
+            const result = await apiClient.request(`/session/${sessionId}/watermark`, {
+                method: 'POST'
+            });
+
+            // Display results
+            displayResults(result);
+
+        } catch (error) {
+            document.getElementById('loading').innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> ${error.message}
+                </div>
+            `;
+        }
+    }
+
+    function displayResults(data) {
+        document.getElementById('loading').classList.add('d-none');
+        document.getElementById('results').classList.remove('d-none');
+
+        // Display status
+        const statusAlert = document.getElementById('status-alert');
+        const statusMessage = document.getElementById('status-message');
+
+        if (data.watermarks_removed > 0) {
+            statusAlert.className = 'alert alert-success mb-4';
+            statusMessage.textContent = `Successfully removed ${data.watermarks_removed} watermark(s) from ${data.watermarks_detected} detected.`;
+        } else if (data.watermarks_detected > 0) {
+            statusAlert.className = 'alert alert-warning mb-4';
+            statusMessage.textContent = `Detected ${data.watermarks_detected} potential watermark(s), but none required removal.`;
+        } else {
+            statusAlert.className = 'alert alert-info mb-4';
+            statusMessage.textContent = 'No watermarks detected. Your image is clean!';
+        }
+
+        // Display original image
+        document.getElementById('original-image').src = data.original_image_url;
+
+        // Display processed image (or original if no watermarks removed)
+        const processedImage = document.getElementById('processed-image');
+        const processedCard = document.getElementById('processed-card');
+
+        if (data.watermark_removed_image_url) {
+            processedImage.src = data.watermark_removed_image_url;
+            processedCard.querySelector('.card-header').classList.remove('bg-secondary');
+            processedCard.querySelector('.card-header').classList.add('bg-success');
+        } else {
+            processedImage.src = data.original_image_url;
+            processedCard.querySelector('.card-header').classList.remove('bg-success');
+            processedCard.querySelector('.card-header').classList.add('bg-secondary');
+            processedCard.querySelector('.card-header h6').innerHTML = `
+                <i class="bi bi-info-circle"></i>
+                No Changes Needed
+            `;
+        }
+
+        // Display watermark details if any detected
+        if (data.regions && data.regions.length > 0) {
+            document.getElementById('watermark-details').classList.remove('d-none');
+
+            const watermarkList = document.getElementById('watermark-list');
+            data.regions.forEach((region, index) => {
+                const row = document.createElement('tr');
+                const bbox = region.bbox;
+                const location = `(${bbox[0]}, ${bbox[1]}) - (${bbox[2]}, ${bbox[3]})`;
+                const confidence = `${Math.round(region.confidence * 100)}%`;
+                const text = region.text || '-';
+
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><code>${location}</code></td>
+                    <td><span class="badge bg-info">${region.type}</span></td>
+                    <td>${confidence}</td>
+                    <td>${text}</td>
+                `;
+                watermarkList.appendChild(row);
+            });
+        }
+
+        // Setup next button
+        document.getElementById('next-btn').onclick = () => {
+            window.location.href = `/split/${sessionId}`;
+        };
+    }
+
+    // Auto-load on page load
+    removeWatermarks();
+</script>
+{% endblock %}

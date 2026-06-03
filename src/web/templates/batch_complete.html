@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Batch Complete - Product Image Processing{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-check-circle-fill text-success"></i>
+            Batch Processing Complete
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Summary</h5>
+            </div>
+            <div class="card-body">
+                <div id="loading" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <div id="summary" class="d-none">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <h2 class="text-success" id="successful-count">0</h2>
+                            <p class="text-muted mb-0">Saved</p>
+                        </div>
+                        <div class="col-4">
+                            <h2 class="text-warning" id="duplicate-count">0</h2>
+                            <p class="text-muted mb-0">Duplicated</p>
+                        </div>
+                        <div class="col-4">
+                            <h2 class="text-danger" id="failed-count">0</h2>
+                            <p class="text-muted mb-0">Failed</p>
+                        </div>
+                    </div>
+                    <hr>
+                    <p class="text-center mb-0">
+                        <strong>Total:</strong> <span id="total-count">0</span> images
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/" class="btn btn-primary btn-lg">
+                        <i class="bi bi-house"></i>
+                        Back to Home
+                    </a>
+                    <a href="/batch/upload" class="btn btn-outline-success">
+                        <i class="bi bi-plus-circle"></i>
+                        Process More Images
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Processing Results</h5>
+            </div>
+            <div class="card-body">
+                <div id="results-loading" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <div id="results-table" class="d-none">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Processed Image</th>
+                                    <th>Original Image</th>
+                                    <th>Filename</th>
+                                    <th>Status</th>
+                                    <th>Aesthetic</th>
+                                    <th>Overall</th>
+                                    <th>Database</th>
+                                    <th>Search</th>
+                                </tr>
+                            </thead>
+                            <tbody id="results-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const batchId = '{{ batch_id }}';
+
+    async function loadResults() {
+        try {
+            const response = await fetch(`/api/batch/${batchId}/status`);
+            if (!response.ok) {
+                throw new Error('Failed to load results');
+            }
+
+            const data = await response.json();
+
+            document.getElementById('loading').classList.add('d-none');
+            document.getElementById('results-loading').classList.add('d-none');
+            document.getElementById('summary').classList.remove('d-none');
+            document.getElementById('results-table').classList.remove('d-none');
+
+            document.getElementById('successful-count').textContent = data.successful;
+            document.getElementById('duplicate-count').textContent = data.skipped_duplicates || 0;
+            document.getElementById('failed-count').textContent = data.failed;
+            document.getElementById('total-count').textContent = data.total;
+
+            const tbody = document.getElementById('results-body');
+            tbody.innerHTML = '';
+
+            data.results.forEach(result => {
+                const tr = document.createElement('tr');
+                const imageUrl = result.image_url;
+                const originalImageUrl = result.original_image_url;
+                tr.innerHTML = `
+                    <td>
+                        <img src="${imageUrl}" alt="${result.filename}"
+                            style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;"
+                            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    </td>
+                    <td>
+                        <img src="${originalImageUrl}" alt="${result.filename}"
+                            style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;"
+                            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    </td>
+                    <td title="${result.filename}">${truncate(result.filename, 30)}</td>
+                    <td>
+                        ${result.success
+                            ? '<span class="badge bg-success"><i class="bi bi-check"></i> Success</span>'
+                            : '<span class="badge bg-danger"><i class="bi bi-x"></i> Failed</span>'}
+                    </td>
+                    <td>${result.aesthetic_score ? result.aesthetic_score.toFixed(2) : '-'}</td>
+                    <td>${result.overall_score ? result.overall_score.toFixed(2) : '-'}</td>
+                    <td>
+                        ${result.is_duplicate
+                            ? '<span class="badge bg-warning text-dark"><i class="bi bi-files"></i> Duplicated</span>'
+                            : result.saved_to_db
+                                ? '<span class="badge bg-success"><i class="bi bi-database-check"></i> Saved</span>'
+                                : '<span class="badge bg-secondary"><i class="bi bi-database-x"></i> Not saved</span>'}
+                    </td>
+                    <td>
+                        ${result.saved_to_db
+                            ? `<a href="/search/by-image/${result.id}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-search"></i>
+                               </a>`
+                            : '<span class="text-muted">-</span>'}
+                    </td>
+                `;
+
+                if (result.error) {
+                    tr.classList.add('table-danger');
+                    tr.title = result.error;
+                }
+
+                tbody.appendChild(tr);
+            });
+
+        } catch (error) {
+            document.getElementById('loading').innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> ${error.message}
+                </div>
+            `;
+            document.getElementById('results-loading').innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> ${error.message}
+                </div>
+            `;
+        }
+    }
+
+    function truncate(str, maxLength) {
+        if (str.length <= maxLength) return str;
+        return str.substring(0, maxLength - 3) + '...';
+    }
+
+    loadResults();
+</script>
+{% endblock %}

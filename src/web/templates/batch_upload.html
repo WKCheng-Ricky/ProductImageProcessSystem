@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Batch Processing - Product Image Processing{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-folder2-open"></i>
+            Batch Processing
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Upload Multiple Images</h5>
+            </div>
+            <div class="card-body">
+                <div id="drop-zone" class="drop-zone mb-3">
+                    <i class="bi bi-cloud-arrow-up display-1 text-muted"></i>
+                    <p class="lead">Drag & Drop Images Here</p>
+                    <p class="text-muted">or</p>
+                    <input type="file" id="file-input" accept="image/jpeg,image/jpg,image/png,image/webp" class="d-none" multiple>
+                    <button class="btn btn-success" onclick="document.getElementById('file-input').click()">
+                        <i class="bi bi-folder2-open"></i>
+                        Browse Files
+                    </button>
+                    <p class="text-muted mt-2"><small>Supported: JPG, PNG, WEBP (Max 50MB each)</small></p>
+                </div>
+
+                <div id="file-list" class="d-none mb-3">
+                    <h6>Selected Files: <span id="file-count">0</span></h6>
+                    <ul id="file-names" class="list-group" style="max-height: 200px; overflow-y: auto;"></ul>
+                </div>
+
+                <button id="upload-btn" class="btn btn-primary btn-lg w-100 d-none" disabled>
+                    <i class="bi bi-upload"></i>
+                    Upload & Process
+                </button>
+
+                <div id="progress-section" class="d-none mt-3">
+                    <div class="alert alert-info">
+                        <span id="progress-text">Uploading...</span>
+                    </div>
+                    <div class="progress">
+                        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="bi bi-sliders"></i>
+                    Processing Options
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="enable-watermark-removal">
+                    <label class="form-check-label" for="enable-watermark-removal">
+                        <strong>Remove Watermarks</strong>
+                        <br>
+                        <small class="text-muted">Detect and remove text watermarks before processing</small>
+                    </label>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="enable-collage-detection">
+                    <label class="form-check-label" for="enable-collage-detection">
+                        <strong>Detect Collages</strong>
+                        <br>
+                        <small class="text-muted">Check if image contains multiple products</small>
+                    </label>
+                </div>
+
+                <hr>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Processing Pipeline:</strong>
+                    <ol class="mb-0 mt-2">
+                        <li>Aesthetic scoring</li>
+                        <li>Remove background & crop to product</li>
+                        <li>Resize to 512x512</li>
+                        <li>Generate CLIP embedding</li>
+                        <li>Save to vector database</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightbulb"></i>
+                    Tips
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li>Select multiple images at once using Ctrl+Click or Shift+Click</li>
+                    <li>Processing may take 3-5 seconds per image</li>
+                    <li>Failed images will be skipped, others will continue processing</li>
+                    <li>All successfully processed images will be saved to the vector database</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const uploadBtn = document.getElementById('upload-btn');
+    const fileList = document.getElementById('file-list');
+    const fileNames = document.getElementById('file-names');
+    const fileCount = document.getElementById('file-count');
+    const progressSection = document.getElementById('progress-section');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+
+    let selectedFiles = [];
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('drag-over');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        handleFiles(e.dataTransfer.files);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+
+    function handleFiles(files) {
+        selectedFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+
+        if (selectedFiles.length === 0) {
+            alert('Please select valid image files');
+            return;
+        }
+
+        fileNames.innerHTML = '';
+        selectedFiles.forEach((f, i) => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.innerHTML = `
+                <span><i class="bi bi-image"></i> ${f.name}</span>
+                <span class="badge bg-secondary">${formatBytes(f.size)}</span>
+            `;
+            fileNames.appendChild(li);
+        });
+
+        fileCount.textContent = selectedFiles.length;
+        fileList.classList.remove('d-none');
+        uploadBtn.classList.remove('d-none');
+        uploadBtn.disabled = false;
+    }
+
+    uploadBtn.addEventListener('click', async () => {
+        if (selectedFiles.length === 0) return;
+
+        const enableWatermarkRemoval = document.getElementById('enable-watermark-removal').checked;
+        const enableCollageDetection = document.getElementById('enable-collage-detection').checked;
+
+        uploadBtn.disabled = true;
+        progressSection.classList.remove('d-none');
+        progressText.textContent = 'Uploading images...';
+        progressBar.style.width = '10%';
+
+        try {
+            const formData = new FormData();
+            selectedFiles.forEach(f => formData.append('files', f));
+
+            const queryParams = new URLSearchParams({
+                skip_watermark_removal: (!enableWatermarkRemoval).toString(),
+                skip_collage_detection: (!enableCollageDetection).toString()
+            });
+
+            const uploadResponse = await fetch(`/api/batch/upload?${queryParams.toString()}`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!uploadResponse.ok) {
+                const error = await uploadResponse.json();
+                throw new Error(error.detail || 'Upload failed');
+            }
+
+            const uploadData = await uploadResponse.json();
+            const batchId = uploadData.batch_id;
+            const totalImages = uploadData.total_images;
+
+            progressText.textContent = `Processing 0/${totalImages} images...`;
+            progressBar.style.width = '10%';
+
+            const processPromise = fetch(`/api/batch/${batchId}/process`, {
+                method: 'POST'
+            });
+
+            const pollInterval = setInterval(async () => {
+                try {
+                    const statusResponse = await fetch(`/api/batch/${batchId}/status`);
+                    if (statusResponse.ok) {
+                        const status = await statusResponse.json();
+                        const processed = status.processed || 0;
+                        const total = status.total || totalImages;
+                        const percent = Math.round(10 + (processed / total) * 85);
+                        progressBar.style.width = `${percent}%`;
+                        progressText.textContent = `Processing ${processed}/${total} images...`;
+                    }
+                } catch (e) {
+                    // Ignore polling errors
+                }
+            }, 15000);
+
+            const processResponse = await processPromise;
+            clearInterval(pollInterval);
+
+            if (!processResponse.ok) {
+                const error = await processResponse.json();
+                throw new Error(error.detail || 'Processing failed');
+            }
+
+            progressBar.style.width = '100%';
+            progressText.textContent = `Complete! Processed ${totalImages} images. Redirecting...`;
+
+            setTimeout(() => {
+                window.location.href = `/batch/complete/${batchId}`;
+            }, 500);
+
+        } catch (error) {
+            progressText.textContent = `Error: ${error.message}`;
+            progressBar.classList.remove('bg-primary');
+            progressBar.classList.add('bg-danger');
+            uploadBtn.disabled = false;
+        }
+    });
+
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+</script>
+{% endblock %}

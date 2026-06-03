@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Aesthetic Score - Product Image Processing{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-star"></i>
+            Step 3: Aesthetic Scoring
+        </h2>
+        <p class="text-muted">Visual aesthetic quality metrics (clarity, composition, defects) based on the original image.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Original Image</h5>
+            </div>
+            <div class="card-body text-center">
+                <img id="original-img" src="" class="img-fluid rounded" alt="Original Image">
+                <div class="mt-3 text-start">
+                    <small class="text-muted">
+                        <div><strong>File Extension:</strong> <span id="filename"></span></div>
+                        <div><strong>Resolution:</strong> <span id="resolution"></span></div>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Aesthetic Metrics</h5>
+            </div>
+            <div class="card-body">
+                <div id="loading" class="text-center my-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Analyzing...</span>
+                    </div>
+                    <p class="mt-2">Analyzing quality...</p>
+                </div>
+
+                <div id="results" class="d-none">
+                    <!-- Overall Score -->
+                    <div class="text-center mb-4">
+                        <h3>Overall Quality Score</h3>
+                        <div class="progress" style="height: 40px;">
+                            <div id="overall-bar" class="progress-bar progress-bar-striped" role="progressbar" style="width: 0%">
+                                <span id="overall-text" class="fw-bold fs-5"></span>
+                            </div>
+                        </div>
+                        <p id="quality-level" class="mt-2"></p>
+                    </div>
+
+                    <!-- Detailed Metrics -->
+                    <div class="row" id="metrics-grid"></div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button id="next-btn" class="btn btn-primary btn-lg">
+                            Next: Split Collage
+                            <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const sessionId = '{{ session_id }}';
+    const apiClient = new APIClient();
+
+    async function analyzeQuality() {
+        try {
+            const [result, session] = await Promise.all([
+                apiClient.request(`/session/${sessionId}/quality`, { method: 'GET' }),
+                apiClient.request(`/session/${sessionId}/status`)
+            ]);
+
+            displayResults(result, session);
+
+        } catch (error) {
+            document.getElementById('loading').innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> ${error.message}
+                </div>
+            `;
+        }
+    }
+
+    function displayResults(data, session) {
+        document.getElementById('loading').classList.add('d-none');
+        document.getElementById('results').classList.remove('d-none');
+
+        // Show original image (aesthetic scoring is on raw image)
+        if (data.original_image_url) {
+            document.getElementById('original-img').src = data.original_image_url;
+        } else if (session?.original_filename) {
+            document.getElementById('original-img').src = `/uploads/sessions/${sessionId}/${session.original_filename}`;
+        }
+
+        // Display file extension and resolution
+        if (data.file_extension) {
+            document.getElementById('filename').textContent = data.file_extension;
+        }
+        if (data.resolution) {
+            const [width, height] = data.resolution;
+            document.getElementById('resolution').textContent = `${width} x ${height} px`;
+        }
+
+        // Overall score
+        const percentage = Math.round(data.aesthetic * 100);
+        const overallBar = document.getElementById('overall-bar');
+        overallBar.style.width = percentage + '%';
+        document.getElementById('overall-text').textContent = percentage + '%';
+
+        // Color code based on quality
+        if (percentage >= 70) {
+            overallBar.className = 'progress-bar progress-bar-striped bg-success';
+            document.getElementById('quality-level').innerHTML = '<span class="badge bg-success fs-5">Excellent Quality</span>';
+        } else if (percentage >= 40) {
+            overallBar.className = 'progress-bar progress-bar-striped bg-warning';
+            document.getElementById('quality-level').innerHTML = '<span class="badge bg-warning fs-5">Acceptable Quality</span>';
+        } else {
+            overallBar.className = 'progress-bar progress-bar-striped bg-danger';
+            document.getElementById('quality-level').innerHTML = '<span class="badge bg-danger fs-5">Poor Quality</span>';
+        }
+
+        // Detailed metrics
+        const metrics = [
+            { name: 'Clarity (Contribution)', value: data.clarity_score, icon: 'palette' },
+            { name: 'Clarity (Est 0% - 100%)', value: data.clarity_score_est, icon: 'palette' },
+            { name: 'Composition (Contribution)', value: data.composition_score, icon: 'palette' },
+            { name: 'Composition (Est 0% - 100%)', value: data.composition_score_est, icon: 'palette' },
+            { name: 'Defect (Contribution)', value: data.defect_score, icon: 'palette' },
+            { name: 'Defect (Est 0% - 100%)', value: data.defect_score_est, icon: 'palette' }
+        ];
+
+        const grid = document.getElementById('metrics-grid');
+        metrics.forEach(metric => {
+            const pct = Math.round(metric.value * 100);
+            const col = document.createElement('div');
+            col.className = 'col-md-6 mb-3';
+            col.innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <h6><i class="bi bi-${metric.icon}"></i> ${metric.name}</h6>
+                        <div>${metric.value}</div>
+                        <div class="progress">
+                            <div class="progress-bar" style="width: ${pct}%">${pct}%</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(col);
+        });
+
+        // Watermark/Text badges
+        if (data.has_watermark || data.has_text_overlay) {
+            const col = document.createElement('div');
+            col.className = 'col-12 mt-2';
+            col.innerHTML = `
+                <div class="alert alert-warning">
+                    ${data.has_watermark ? '<span class="badge bg-warning me-2">Watermark Detected</span>' : ''}
+                    ${data.has_text_overlay ? '<span class="badge bg-warning">Text Overlay Detected</span>' : ''}
+                </div>
+            `;
+            grid.appendChild(col);
+        }
+
+        document.getElementById('next-btn').onclick = () => {
+            window.location.href = `/split/${sessionId}`;
+        };
+    }
+
+    // Auto-load on page load
+    analyzeQuality();
+</script>
+{% endblock %}

@@ -1,0 +1,77 @@
+# Claude Code
+# CLAUDE.md
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# IDEs & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.sublime-project
+.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+.env
+.env.local
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# database
+data/
+
+# resource
+resource/
+uploads/
+
+# Other
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Archive
+.archive/
+.finetune/
+.claude/
+test_clip/
+test_clip_2/
+example/
+log/

@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+
+{% block title %}Product Grouping - Product Image Processing{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-diagram-3"></i>
+            Product Grouping
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">Grouping Parameters</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="threshold" class="form-label">Similarity Threshold: <span id="threshold-value">0.90</span></label>
+                    <input type="range" class="form-range" id="threshold" min="0.70" max="0.99" step="0.01" value="0.90">
+                    <small class="text-muted">Products with similarity above this threshold will be grouped together.</small>
+                </div>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="clear-existing" checked>
+                    <label class="form-check-label" for="clear-existing">Clear existing groups</label>
+                </div>
+                <button id="run-grouping-btn" class="btn btn-warning w-100">
+                    <i class="bi bi-play-fill"></i>
+                    Run Grouping
+                </button>
+            </div>
+        </div>
+
+        <div class="card" id="stats-card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div id="stats-loading" class="text-center d-none">
+                    <div class="spinner-border spinner-border-sm text-info" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <span class="ms-2">Loading stats...</span>
+                </div>
+                <div id="stats-content">
+                    <p class="text-muted">Click "Run Grouping" to generate groups.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Product Groups</h5>
+                <button id="refresh-btn" class="btn btn-sm btn-light" title="Refresh groups">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="initial-status" class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    Click "Run Grouping" to group products by similarity, or click refresh to view existing groups.
+                </div>
+
+                <div id="loading" class="text-center my-5 d-none">
+                    <div class="spinner-border text-warning" role="status">
+                        <span class="visually-hidden">Grouping...</span>
+                    </div>
+                    <p class="mt-2">Grouping products... This may take a while for large databases.</p>
+                </div>
+
+                <div id="results" class="d-none">
+                    <div id="results-summary" class="mb-3"></div>
+                    <div id="groups-container" class="accordion"></div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="/" class="btn btn-primary btn-lg">
+                            <i class="bi bi-house"></i>
+                            Back to Home
+                        </a>
+                    </div>
+                </div>
+
+                <div id="no-groups" class="d-none">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        No groups found. Make sure there are products in the database first.
+                    </div>
+                    <div class="d-grid gap-2">
+                        <a href="/batch/upload" class="btn btn-success">
+                            <i class="bi bi-folder2-open"></i>
+                            Upload Products First
+                        </a>
+                        <a href="/" class="btn btn-primary">
+                            <i class="bi bi-house"></i>
+                            Back to Home
+                        </a>
+                    </div>
+                </div>
+
+                <div id="error" class="d-none">
+                    <div class="alert alert-danger">
+                        <i class="bi bi-x-circle"></i>
+                        <span id="error-message"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const apiClient = new APIClient();
+
+    document.getElementById('threshold').addEventListener('input', (e) => {
+        document.getElementById('threshold-value').textContent = parseFloat(e.target.value).toFixed(2);
+    });
+
+    document.getElementById('run-grouping-btn').addEventListener('click', runGrouping);
+    document.getElementById('refresh-btn').addEventListener('click', loadExistingGroups);
+
+    async function runGrouping() {
+        const threshold = parseFloat(document.getElementById('threshold').value);
+        const clearExisting = document.getElementById('clear-existing').checked;
+
+        hideAll();
+        document.getElementById('loading').classList.remove('d-none');
+
+        try {
+            const result = await apiClient.request(
+                `/grouping/run?similarity_threshold=${threshold}&clear_existing=${clearExisting}`,
+                { method: 'POST' }
+            );
+
+            displayResults(result);
+            loadStats();
+
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    async function loadExistingGroups() {
+        hideAll();
+        document.getElementById('loading').classList.remove('d-none');
+
+        try {
+            const result = await apiClient.get('/grouping/results');
+            displayResults(result);
+            loadStats();
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    async function loadStats() {
+        document.getElementById('stats-loading').classList.remove('d-none');
+
+        try {
+            const stats = await apiClient.get('/grouping/stats');
+            displayStats(stats);
+        } catch (error) {
+            document.getElementById('stats-content').innerHTML = `
+                <div class="alert alert-warning mb-0">Could not load stats</div>
+            `;
+        } finally {
+            document.getElementById('stats-loading').classList.add('d-none');
+        }
+    }
+
+    function displayStats(stats) {
+        const html = `
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2">
+                    <i class="bi bi-database"></i>
+                    <strong>Products in DB:</strong> ${stats.total_products_in_db}
+                </li>
+                <li class="mb-2">
+                    <i class="bi bi-collection"></i>
+                    <strong>Total Groups:</strong> ${stats.total_groups}
+                </li>
+                <li class="mb-2">
+                    <i class="bi bi-people"></i>
+                    <strong>Multi-member Groups:</strong> ${stats.groups_with_multiple_members}
+                </li>
+                <li class="mb-2">
+                    <i class="bi bi-bar-chart"></i>
+                    <strong>Avg Group Size:</strong> ${stats.avg_group_size.toFixed(2)}
+                </li>
+                <li class="mb-2">
+                    <i class="bi bi-arrow-up"></i>
+                    <strong>Max Group Size:</strong> ${stats.max_group_size}
+                </li>
+                <li>
+                    <i class="bi bi-arrow-down"></i>
+                    <strong>Min Group Size:</strong> ${stats.min_group_size}
+                </li>
+            </ul>
+        `;
+        document.getElementById('stats-content').innerHTML = html;
+    }
+
+    function displayResults(data) {
+        hideAll();
+
+        if (data.total_groups === 0) {
+            document.getElementById('no-groups').classList.remove('d-none');
+            return;
+        }
+
+        document.getElementById('results').classList.remove('d-none');
+
+        document.getElementById('results-summary').innerHTML = `
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle"></i>
+                Found <strong>${data.total_groups}</strong> groups with <strong>${data.total_products}</strong> total products.
+                <strong>${data.groups_with_multiple_members}</strong> groups have multiple members.
+            </div>
+        `;
+
+        const container = document.getElementById('groups-container');
+        container.innerHTML = '';
+
+        const multiMemberGroups = data.groups.filter(g => g.member_count > 1);
+        const singleMemberGroups = data.groups.filter(g => g.member_count === 1);
+
+        if (multiMemberGroups.length > 0) {
+            const multiHeader = document.createElement('h5');
+            multiHeader.className = 'mt-3 mb-3';
+            multiHeader.innerHTML = '<i class="bi bi-people-fill"></i> Groups with Multiple Members';
+            container.appendChild(multiHeader);
+
+            multiMemberGroups.forEach((group, index) => {
+                container.appendChild(createGroupCard(group, index, 'multi'));
+            });
+        }
+
+        if (singleMemberGroups.length > 0) {
+            const singleHeader = document.createElement('h5');
+            singleHeader.className = 'mt-4 mb-3';
+            singleHeader.innerHTML = '<i class="bi bi-person"></i> Single Member Groups <span class="badge bg-secondary">' + singleMemberGroups.length + '</span>';
+            container.appendChild(singleHeader);
+
+            const singleContainer = document.createElement('div');
+            singleContainer.className = 'row';
+            singleMemberGroups.slice(0, 12).forEach(group => {
+                const col = document.createElement('div');
+                col.className = 'col-md-3 col-sm-4 col-6 mb-3';
+                const member = group.members[0];
+                col.innerHTML = `
+                    <div class="card h-100">
+                        <div class="card-body p-2 text-center">
+                            ${member.image_url
+                                ? `<img src="${member.image_url}" class="img-fluid rounded mb-2" alt="${member.id}" style="max-height: 80px; object-fit: contain;">`
+                                : `<div class="bg-light rounded d-flex align-items-center justify-content-center mb-2" style="height: 80px;"><i class="bi bi-image text-muted"></i></div>`
+                            }
+                            <small class="text-truncate d-block" title="${member.id}">${member.id}</small>
+                        </div>
+                    </div>
+                `;
+                singleContainer.appendChild(col);
+            });
+            container.appendChild(singleContainer);
+
+            if (singleMemberGroups.length > 12) {
+                const moreText = document.createElement('p');
+                moreText.className = 'text-muted text-center';
+                moreText.textContent = `... and ${singleMemberGroups.length - 12} more single-member groups`;
+                container.appendChild(moreText);
+            }
+        }
+    }
+
+    function createGroupCard(group, index, type) {
+        const item = document.createElement('div');
+        item.className = 'accordion-item';
+
+        const headerId = `heading-${type}-${index}`;
+        const collapseId = `collapse-${type}-${index}`;
+
+        const memberImages = group.members.slice(0, 5).map(member => {
+            if (member.image_url) {
+                return `<img src="${member.image_url}" class="rounded me-1" style="width: 40px; height: 40px; object-fit: contain; background: #f8f9fa;" alt="${member.id}">`;
+            }
+            return `<div class="rounded me-1 bg-light d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="bi bi-image text-muted small"></i></div>`;
+        }).join('');
+
+        const moreCount = group.member_count > 5 ? `<span class="badge bg-secondary ms-2">+${group.member_count - 5} more</span>` : '';
+
+        item.innerHTML = `
+            <h2 class="accordion-header" id="${headerId}">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
+                    <div class="d-flex align-items-center w-100">
+                        <span class="badge bg-warning text-dark me-2">${group.member_count}</span>
+                        <span class="me-3 text-truncate" style="max-width: 200px;" title="${group.group_id}">
+                            Group: ${group.group_id.substring(0, 8)}...
+                        </span>
+                        <div class="d-flex align-items-center">
+                            ${memberImages}
+                            ${moreCount}
+                        </div>
+                    </div>
+                </button>
+            </h2>
+            <div id="${collapseId}" class="accordion-collapse collapse" data-bs-parent="#groups-container">
+                <div class="accordion-body">
+                    <div class="row">
+                        ${group.members.map(member => `
+                            <div class="col-md-3 col-sm-4 col-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body p-2">
+                                        ${member.image_url
+                                            ? `<img src="${member.image_url}" class="img-fluid rounded mb-2" alt="${member.id}" style="max-height: 100px; width: 100%; object-fit: contain; background: #f8f9fa;">`
+                                            : `<div class="bg-light rounded d-flex align-items-center justify-content-center mb-2" style="height: 100px;"><i class="bi bi-image text-muted"></i></div>`
+                                        }
+                                        <small class="d-block text-truncate" title="${member.id}">
+                                            ${member.id === group.representative_id ? '<i class="bi bi-star-fill text-warning"></i> ' : ''}
+                                            ${member.id}
+                                        </small>
+                                        <a href="/search/by-image/${member.id}" class="btn btn-sm btn-outline-primary mt-1 w-100">
+                                            <i class="bi bi-search"></i> Search
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        return item;
+    }
+
+    function hideAll() {
+        document.getElementById('initial-status').classList.add('d-none');
+        document.getElementById('loading').classList.add('d-none');
+        document.getElementById('results').classList.add('d-none');
+        document.getElementById('no-groups').classList.add('d-none');
+        document.getElementById('error').classList.add('d-none');
+    }
+
+    function showError(message) {
+        hideAll();
+        document.getElementById('error').classList.remove('d-none');
+        document.getElementById('error-message').textContent = message;
+    }
+
+    loadStats();
+</script>
+{% endblock %}

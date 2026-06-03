@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Product Image Processing{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="text-center mb-5">
+            <h1 class="display-4">
+                <i class="bi bi-images"></i>
+                Product Image Processing
+            </h1>
+            <p class="lead text-muted">
+                Process product images with collage detection, background removal, quality scoring, and similarity search.
+            </p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-cloud-upload display-1 text-primary"></i>
+                        </div>
+                        <h3 class="card-title">Single Image Upload</h3>
+                        <p class="card-text text-muted">
+                            Upload and process a single product image through the complete pipeline.
+                        </p>
+                        <a href="/upload" class="btn btn-primary btn-lg">
+                            <i class="bi bi-arrow-right-circle"></i>
+                            Get Started
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-folder2-open display-1 text-success"></i>
+                        </div>
+                        <h3 class="card-title">Batch Processing</h3>
+                        <p class="card-text text-muted">
+                            Process multiple images at once with automatic embedding generation.
+                        </p>
+                        <a href="/batch/upload" class="btn btn-success btn-lg">
+                            <i class="bi bi-arrow-right-circle"></i>
+                            Get Started
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-diagram-3 display-1 text-warning"></i>
+                        </div>
+                        <h3 class="card-title">Group Products</h3>
+                        <p class="card-text text-muted">
+                            Group similar products together based on embedding similarity.
+                        </p>
+                        <a href="/grouping" class="btn btn-warning btn-lg">
+                            <i class="bi bi-arrow-right-circle"></i>
+                            Get Started
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-search display-1 text-info"></i>
+                        </div>
+                        <h3 class="card-title">Text Search</h3>
+                        <p class="card-text text-muted">
+                            Search products by text description using CLIP's shared embedding space.
+                        </p>
+                        <a href="/search/text" class="btn btn-info btn-lg">
+                            <i class="bi bi-arrow-right-circle"></i>
+                            Get Started
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-database-fill-gear display-1 text-danger"></i>
+                        </div>
+                        <h3 class="card-title">Duplicate Records</h3>
+                        <p class="card-text text-muted">
+                            Duplicate existing database records for testing purposes.
+                        </p>
+                        <a href="/duplicate" class="btn btn-danger btn-lg">
+                            <i class="bi bi-arrow-right-circle"></i>
+                            Get Started
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-5">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle"></i>
+                    Processing Pipeline
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col">
+                        <i class="bi bi-cloud-upload fs-3 text-primary"></i>
+                        <p class="small mb-0">Upload</p>
+                    </div>
+                    <div class="col">
+                        <i class="bi bi-arrow-right text-muted"></i>
+                    </div>
+                    <div class="col">
+                        <i class="bi bi-star fs-3 text-primary"></i>
+                        <p class="small mb-0">Aesthetic</p>
+                    </div>
+                    <div class="col">
+                        <i class="bi bi-arrow-right text-muted"></i>
+                    </div>
+                    <div class="col">
+                        <i class="bi bi-grid-3x3 fs-3 text-primary"></i>
+                        <p class="small mb-0">Split</p>
+                    </div>
+                    <div class="col">
+                        <i class="bi bi-arrow-right text-muted"></i>
+                    </div>
+                    <div class="col">
+                        <i class="bi bi-magic fs-3 text-primary"></i>
+                        <p class="small mb-0">Preprocess</p>
+                    </div>
+                    <div class="col">
+                        <i class="bi bi-arrow-right text-muted"></i>
+                    </div>
+                    <div class="col">
+                        <i class="bi bi-cpu fs-3 text-primary"></i>
+                        <p class="small mb-0">Embedding</p>
+                    </div>
+                    <div class="col">
+                        <i class="bi bi-arrow-right text-muted"></i>
+                    </div>
+                    <div class="col">
+                        <i class="bi bi-search fs-3 text-primary"></i>
+                        <p class="small mb-0">Search</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

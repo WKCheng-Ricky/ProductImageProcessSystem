@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Embedding Generation - Product Image Processing{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-cpu"></i>
+            Step 6: Generate Embedding
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Processed Image</h5>
+            </div>
+            <div class="card-body text-center">
+                <img id="processed-img" src="/uploads/sessions/{{ session_id }}/preprocessed.jpg" class="img-fluid rounded" alt="Processed Image">
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Embedding Generation</h5>
+            </div>
+            <div class="card-body">
+                <div id="loading" class="text-center my-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Generating...</span>
+                    </div>
+                    <p class="mt-2">Generating CLIP embedding...</p>
+                    <p class="text-muted"><small>(First time may take ~30s to load model)</small></p>
+                </div>
+
+                <div id="results" class="d-none">
+                    <div id="success-alert" class="alert alert-success">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <strong>Embedding Generated Successfully!</strong>
+                    </div>
+
+                    <div id="duplicate-alert" class="alert alert-warning d-none">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <strong>Duplicate Detected!</strong>
+                        <p class="mb-0 mt-2">This image matches an existing entry: <strong id="duplicate-id"></strong> (<span id="duplicate-score"></span>% similarity)</p>
+                    </div>
+
+                    <h6>Embedding Details:</h6>
+                    <ul class="list-group mb-4">
+                        <li class="list-group-item">
+                            <strong>Model:</strong> <span id="model-name"></span>
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Dimension:</strong> <span id="dimension"></span>
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Normalized:</strong> <span id="normalized"></span>
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Generation Time:</strong> <span id="gen-time"></span>
+                        </li>
+                        <li class="list-group-item" id="id-info-item">
+                            <strong>ID:</strong> <span id="product-id"></span>
+                            <span id="db-status" class="ms-2"></span>
+                        </li>
+                    </ul>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        The embedding is a 768-dimensional vector representation of your image, enabling semantic similarity search across millions of products.
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button id="next-btn" class="btn btn-primary btn-lg">
+                            Next: Search Similar Products
+                            <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const sessionId = '{{ session_id }}';
+    const apiClient = new APIClient();
+
+    async function generateEmbedding() {
+        try {
+            const result = await apiClient.request(`/session/${sessionId}/embedding`, {
+                method: 'POST'
+            });
+
+            displayResults(result);
+
+        } catch (error) {
+            document.getElementById('loading').innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> ${error.message}
+                </div>
+            `;
+        }
+    }
+
+    function displayResults(data) {
+        document.getElementById('loading').classList.add('d-none');
+        document.getElementById('results').classList.remove('d-none');
+
+        // Show duplicate alert if detected
+        if (data.is_duplicate) {
+            document.getElementById('success-alert').classList.add('d-none');
+            document.getElementById('duplicate-alert').classList.remove('d-none');
+            document.getElementById('duplicate-id').textContent = data.duplicate_of;
+            document.getElementById('duplicate-score').textContent = (data.duplicate_score * 100).toFixed(1);
+        }
+
+        document.getElementById('model-name').textContent = data.model_name;
+        document.getElementById('dimension').textContent = data.dimension;
+        document.getElementById('normalized').textContent = data.normalized ? 'Yes' : 'No';
+        document.getElementById('gen-time').textContent = data.generation_time.toFixed(2) + 's';
+
+        // Display ID info
+        const idInfoItem = document.getElementById('id-info-item');
+        if (data.id) {
+            document.getElementById('product-id').textContent = data.id;
+            const dbStatus = document.getElementById('db-status');
+            if (data.is_duplicate) {
+                dbStatus.innerHTML = '<span class="badge bg-warning text-dark"><i class="bi bi-files"></i> Duplicated</span>';
+            } else if (data.saved_to_db) {
+                dbStatus.innerHTML = '<span class="badge bg-success"><i class="bi bi-database-check"></i> Saved to DB</span>';
+            } else {
+                dbStatus.innerHTML = '<span class="badge bg-secondary"><i class="bi bi-database-x"></i> Not saved</span>';
+            }
+        } else {
+            idInfoItem.innerHTML = '<strong>ID:</strong> <span class="text-muted">Not provided</span>';
+        }
+
+        document.getElementById('next-btn').onclick = () => {
+            window.location.href = `/search/${sessionId}`;
+        };
+    }
+
+    // Auto-load on page load
+    generateEmbedding();
+</script>
+{% endblock %}

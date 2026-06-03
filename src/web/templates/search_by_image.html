@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Similar Product Search - Product Image Processing{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-search"></i>
+            Similar Product Search
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Query Image</h5>
+            </div>
+            <div class="card-body text-center">
+                <img id="query-img" src="" class="img-fluid rounded mb-2" alt="Query Image" style="max-height: 200px;">
+                <p class="text-muted mb-0"><strong>ID:</strong> {{ image_id }}</p>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Search Parameters</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="top-k" class="form-label">Top K Results: <span id="top-k-value">10</span></label>
+                    <input type="range" class="form-range" id="top-k" min="1" max="50" value="10">
+                </div>
+                <div class="mb-3">
+                    <label for="threshold" class="form-label">Similarity Threshold: <span id="threshold-value">0.70</span></label>
+                    <input type="range" class="form-range" id="threshold" min="0.5" max="1.0" step="0.05" value="0.70">
+                </div>
+                <button id="search-btn" class="btn btn-success w-100">
+                    <i class="bi bi-search"></i>
+                    Search Again
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <button class="btn btn-secondary w-100" onclick="history.back()">
+                    <i class="bi bi-arrow-left"></i>
+                    Back
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Similar Products</h5>
+            </div>
+            <div class="card-body">
+                <div id="loading" class="text-center my-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Searching...</span>
+                    </div>
+                    <p class="mt-2">Searching for similar products...</p>
+                </div>
+
+                <div id="results" class="d-none">
+                    <div id="results-count" class="mb-3"></div>
+                    <div id="results-grid" class="row"></div>
+                </div>
+
+                <div id="no-results" class="d-none">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        No similar products found. Try lowering the similarity threshold.
+                    </div>
+                </div>
+
+                <div id="error" class="d-none">
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-circle"></i>
+                        <span id="error-message"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const imageId = '{{ image_id }}';
+
+    document.getElementById('top-k').addEventListener('input', (e) => {
+        document.getElementById('top-k-value').textContent = e.target.value;
+    });
+
+    document.getElementById('threshold').addEventListener('input', (e) => {
+        document.getElementById('threshold-value').textContent = parseFloat(e.target.value).toFixed(2);
+    });
+
+    document.getElementById('search-btn').addEventListener('click', () => {
+        performSearch();
+    });
+
+    async function performSearch() {
+        const topK = parseInt(document.getElementById('top-k').value);
+        const threshold = parseFloat(document.getElementById('threshold').value);
+
+        document.getElementById('loading').classList.remove('d-none');
+        document.getElementById('results').classList.add('d-none');
+        document.getElementById('no-results').classList.add('d-none');
+        document.getElementById('error').classList.add('d-none');
+
+        try {
+            const response = await fetch(`/api/search/by-image/${imageId}?top_k=${topK}&threshold=${threshold}`);
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.detail || 'Search failed');
+            }
+
+            const data = await response.json();
+            displayResults(data);
+
+        } catch (error) {
+            document.getElementById('loading').classList.add('d-none');
+            document.getElementById('error').classList.remove('d-none');
+            document.getElementById('error-message').textContent = error.message;
+        }
+    }
+
+    function displayResults(data) {
+        document.getElementById('loading').classList.add('d-none');
+
+        // Update query image if available
+        if (data.query_image_url) {
+            document.getElementById('query-img').src = data.query_image_url;
+        }
+
+        if (data.results.length === 0) {
+            document.getElementById('no-results').classList.remove('d-none');
+            return;
+        }
+
+        document.getElementById('results').classList.remove('d-none');
+
+        document.getElementById('results-count').innerHTML = `
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle"></i>
+                Found <strong>${data.total_count}</strong> similar products
+            </div>
+        `;
+
+        const grid = document.getElementById('results-grid');
+        grid.innerHTML = '';
+
+        data.results.forEach((result) => {
+            const scorePercent = Math.round(result.score * 100);
+            let badgeClass = 'bg-secondary';
+            let confidenceText = result.confidence_level || 'Unknown';
+
+            if (result.score >= 0.9) {
+                badgeClass = 'bg-success';
+                confidenceText = 'High Confidence';
+            } else if (result.score >= 0.7) {
+                badgeClass = 'bg-warning';
+                confidenceText = 'Moderate Confidence';
+            } else {
+                badgeClass = 'bg-danger';
+                confidenceText = 'Low Confidence';
+            }
+
+            let matchBadgeClass = 'bg-primary';
+            if (scorePercent < 25) {
+                matchBadgeClass = 'bg-danger';
+            } else if (scorePercent < 75) {
+                matchBadgeClass = 'bg-warning';
+            }
+
+            const aestheticPercent = result.metadata && result.metadata.aesthetic != null
+                ? Math.round(result.metadata.aesthetic * 100)
+                : 0;
+            let aestheticBadgeClass = 'bg-secondary';
+            let aestheticText = 'Unknown Aesthetic';
+
+            if (aestheticPercent >= 75) {
+                aestheticBadgeClass = 'bg-success';
+                aestheticText = 'High Aesthetic';
+            } else if (aestheticPercent >= 50) {
+                aestheticBadgeClass = 'bg-warning';
+                aestheticText = 'Mid Aesthetic';
+            } else if (aestheticPercent > 0) {
+                aestheticBadgeClass = 'bg-danger';
+                aestheticText = 'Low Aesthetic';
+            }
+
+            const col = document.createElement('div');
+            col.className = 'col-md-6 mb-3';
+            col.innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-5">
+                                <div class="mb-2 position-relative">
+                                    ${result.image_url
+                                        ? `<img src="${result.image_url}" class="img-fluid rounded" alt="Processed" style="max-height: 120px; width: 100%; object-fit: contain; background: #f8f9fa;">`
+                                        : `<div class="bg-secondary rounded d-flex align-items-center justify-content-center" style="width:100%;height:120px;"><i class="bi bi-image text-light"></i></div>`
+                                    }
+                                    <div class="bottom-0 start-0 w-100 text-center" style="background: rgba(0,0,0,0.6);">
+                                        <small class="text-white fw-bold">Processed</small>
+                                    </div>
+                                </div>
+                                <div class="position-relative">
+                                    ${result.original_image_url
+                                        ? `<img src="${result.original_image_url}" class="img-fluid rounded" alt="Original" style="max-height: 120px; width: 100%; object-fit: contain; background: #f8f9fa;">`
+                                        : `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="width:100%;height:120px;"><i class="bi bi-image-fill text-muted"></i></div>`
+                                    }
+                                    <div class="bottom-0 start-0 w-100 text-center" style="background: rgba(0,0,0,0.6); padding: 2px 0;">
+                                        <small class="text-white fw-bold">Original</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-7 d-flex flex-column justify-content-between">
+                                <div class="mb-2">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-box-seam"></i>
+                                        <strong>ID:</strong> ${result.id}
+                                    </h6>
+                                </div>
+                                <div class="mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge ${badgeClass} flex-shrink-0">${confidenceText}</span>
+                                    </div>
+                                    <div class="progress">
+                                        <div class="progress-bar" style="width: ${scorePercent}%">${scorePercent}%</div>
+                                    </div>
+                                </div>
+                                <div>
+                                    ${aestheticPercent > 0 ? `
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge ${aestheticBadgeClass} flex-shrink-0">${aestheticText}</span>
+                                    </div>
+                                    <div class="progress">
+                                        <div class="progress-bar" style="width: ${aestheticPercent}%">${aestheticPercent}%</div>
+                                    </div>
+                                    ` : '<span class="badge bg-secondary">No Aesthetic Data</span>'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(col);
+        });
+    }
+
+    // Auto-search on page load
+    performSearch();
+</script>
+{% endblock %}

@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Preprocessing - Product Image Processing{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-magic"></i>
+            Step 5: Image Preprocessing
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Before & After</h5>
+            </div>
+            <div class="card-body">
+                <div id="loading" class="text-center my-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Processing...</span>
+                    </div>
+                    <p class="mt-2">Preprocessing image... (this may take ~30s)</p>
+                </div>
+
+                <div id="results" class="d-none">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-center">Before</h6>
+                            <img id="before-img" src="" class="img-fluid rounded" alt="Before">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-center">After</h6>
+                            <img id="after-img" src="" class="img-fluid rounded" alt="After">
+                        </div>
+                    </div>
+
+                    <div id="metadata" class="mt-3"></div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button id="next-btn" class="btn btn-primary btn-lg">
+                            Next: Generate Embedding
+                            <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Processing Options</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="remove-bg" checked>
+                    <label class="form-check-label" for="remove-bg">
+                        Remove Background
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="crop" checked>
+                    <label class="form-check-label" for="crop">
+                        Crop to Product
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="remove-watermark" checked>
+                    <label class="form-check-label" for="remove-watermark">
+                        Remove Watermark
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="resize" checked>
+                    <label class="form-check-label" for="resize">
+                        Resize to Standard (512x512)
+                    </label>
+                </div>
+
+                <hr class="my-3">
+
+                <div class="d-grid">
+                    <button id="bypass-btn" class="btn btn-outline-warning">
+                        <i class="bi bi-skip-forward"></i>
+                        Bypass Preprocessing
+                    </button>
+                    <small class="text-muted mt-2">Skip preprocessing and use original image</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const sessionId = '{{ session_id }}';
+    const apiClient = new APIClient();
+
+    async function preprocessImage() {
+        try {
+            // Read checkbox values
+            const removeBg = document.getElementById('remove-bg').checked;
+            const crop = document.getElementById('crop').checked;
+            const removeWatermark = document.getElementById('remove-watermark').checked;
+            const resize = document.getElementById('resize').checked;
+
+            // Build query string
+            const queryParams = new URLSearchParams({
+                remove_bg: removeBg.toString(),
+                crop: crop.toString(),
+                remove_watermark: removeWatermark.toString(),
+                resize: resize.toString()
+            });
+
+            const result = await apiClient.request(`/session/${sessionId}/preprocess?${queryParams.toString()}`, {
+                method: 'POST'
+            });
+
+            displayResults(result);
+
+        } catch (error) {
+            document.getElementById('loading').innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> ${error.message}
+                </div>
+            `;
+        }
+    }
+
+    async function getOriginalImage() {
+        try {
+            const session = await apiClient.request(`/session/${sessionId}/status`);
+            if (!session.original_filename) return '';
+            return `/uploads/sessions/${sessionId}/${session.original_filename}`;
+        } catch {
+            return '';
+        }
+    }
+
+    async function displayResults(data) {
+        document.getElementById('loading').classList.add('d-none');
+        document.getElementById('results').classList.remove('d-none');
+
+        // Show before/after
+        document.getElementById('before-img').src = await getOriginalImage();
+        document.getElementById('after-img').src = data.processed_image_url;
+
+        // Show metadata
+        const metadataDiv = document.getElementById('metadata');
+        metadataDiv.innerHTML = `
+            <h6>Processing Info:</h6>
+            <ul class="list-group">
+                <li class="list-group-item">
+                    <i class="bi bi-check-circle text-success"></i>
+                    Background Removed: ${data.background_removed ? 'Yes' : 'No'}
+                </li>
+                <li class="list-group-item">
+                    <i class="bi bi-arrows-angle-contract"></i>
+                    Original Size: ${data.original_size[0]} x ${data.original_size[1]}
+                </li>
+            </ul>
+        `;
+
+        document.getElementById('next-btn').onclick = () => {
+            window.location.href = `/embedding/${sessionId}`;
+        };
+    }
+
+    async function bypassPreprocessing() {
+        try {
+            const result = await apiClient.request(`/session/${sessionId}/preprocess/bypass`, {
+                method: 'POST'
+            });
+            window.location.href = `/embedding/${sessionId}`;
+        } catch (error) {
+            alert(`Bypass failed: ${error.message}`);
+        }
+    }
+
+    // Event listeners
+    document.getElementById('bypass-btn').addEventListener('click', bypassPreprocessing);
+
+    // Auto-load on page load
+    preprocessImage();
+</script>
+{% endblock %}

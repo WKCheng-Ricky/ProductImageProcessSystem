@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Split Collage - Product Image Processing{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-grid-3x3"></i>
+            Step 4: Split Collage
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Split Images</h5>
+            </div>
+            <div class="card-body">
+                <div id="loading" class="text-center my-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Splitting collage...</p>
+                </div>
+
+                <div id="results" class="d-none">
+                    <div class="row" id="split-images-grid"></div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button id="next-btn" class="btn btn-primary btn-lg">
+                            Next: Preprocess Image
+                            <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const sessionId = '{{ session_id }}';
+    const apiClient = new APIClient();
+
+    async function loadAndSplit() {
+        try {
+            // Check if we should even be on this page
+            // If collage detection was skipped or no collage detected, redirect to preprocessing
+            const collageInfo = await apiClient.get(`/session/${sessionId}/collage`);
+
+            if (!collageInfo.is_collage) {
+                // No need to split - redirect to preprocessing
+                document.getElementById('loading').innerHTML = `
+                    <div class="alert alert-info">
+                        <strong>No collage detected.</strong> Redirecting to preprocessing...
+                    </div>
+                `;
+                setTimeout(() => {
+                    window.location.href = `/preprocessing/${sessionId}`;
+                }, 1000);
+                return;
+            }
+
+            // Trigger split
+            const result = await apiClient.request(`/session/${sessionId}/split`, {
+                method: 'POST'
+            });
+
+            // Display results
+            displayResults(result);
+
+        } catch (error) {
+            document.getElementById('loading').innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> ${error.message}
+                </div>
+            `;
+        }
+    }
+
+    function displayResults(data) {
+        document.getElementById('loading').classList.add('d-none');
+        document.getElementById('results').classList.remove('d-none');
+
+        const grid = document.getElementById('split-images-grid');
+        data.split_image_urls.forEach((url, index) => {
+            const col = document.createElement('div');
+            col.className = 'col-md-4 mb-3';
+            col.innerHTML = `
+                <div class="card">
+                    <img src="${url}" class="card-img-top" alt="Split Image ${index + 1}">
+                    <div class="card-body text-center">
+                        <span class="badge bg-primary">Image ${index + 1}</span>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(col);
+        });
+
+        document.getElementById('next-btn').onclick = () => {
+            window.location.href = `/preprocessing/${sessionId}`;
+        };
+    }
+
+    // Auto-load on page load
+    loadAndSplit();
+</script>
+{% endblock %}
