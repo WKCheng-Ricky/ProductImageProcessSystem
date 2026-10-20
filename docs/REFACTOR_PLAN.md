@@ -1,6 +1,6 @@
 # Refactor plan: code-quality follow-up to Tier 1
 
-Status: proposed, nothing implemented yet. Sits between Tier 1 and Tier 2 of `docs/MODERNISATION_PLAN.md`.
+Status: implemented on branch `refactor/code-quality` (see the table below for scope notes), nothing pushed. Sits between Tier 1 and Tier 2 of `docs/MODERNISATION_PLAN.md`.
 
 ## Context
 
@@ -65,6 +65,21 @@ The green `ruff` result is weaker than it looks: `pyproject.toml` ignores F401 (
    - Risk: medium
    - Verify: `pytest -m model` (opt-in) and a Docker build.
 10. **Split `ProductImagePipeline.process_image`** (about 130 lines) into named step methods. Split `milvus_db.py` (589 lines) only if it is touched anyway.
+
+## Status
+
+| Step | Result |
+|---|---|
+| 1 | Done. `SessionManager` accepts only UUIDs and `batch_<8 hex>`; traversal tests added. |
+| 2 | Done. `batch.py` and all other pipeline-calling routes are plain `def`; fake yields removed. `upload_image` reads via `file.file`. |
+| 3 | Done. Double-checked lock, failed builds not cached; a vector DB failure in the batch duplicate check now fails that image instead of being swallowed. |
+| 4 | Done as plain constants in `config.py`; defaults unchanged and pinned by `tests/test_config_defaults.py`. The ProductGrouper 0.85 default and `main.py`'s 0.95 are left as they were. |
+| 5 | Partly done. Clients no longer receive `str(e)` on 500s and the Milvus fallback logs an error. The repeated `try/except` blocks were not collapsed into one handler. |
+| 6 | Done for `src/pipeline`; `pipeline_preloader.py` keeps its script entry point. |
+| 7 | Done for F401, F541, F841 and E741. E501 stays ignored. |
+| 8 | Done. `tests/test_pipeline_e2e.py` runs the real pipeline and `tests/test_web_flow_e2e.py` the real page flow with a fake thumbnail embedder; plus Milvus guard and stage tests. |
+| 9 | Done, but not yet run against real weights (`pytest -m model` skips in this venv, which has no torch). Run it and a Docker build before merging. |
+| 10 | `process_image` split. `milvus_db.py` was not split. |
 
 ## Order of work
 

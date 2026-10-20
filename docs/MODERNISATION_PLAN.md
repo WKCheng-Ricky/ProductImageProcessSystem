@@ -94,7 +94,7 @@ Decisions:
 
 ## Refactor tier: code-quality follow-up (between Tier 1 and Tier 2)
 
-Tier 1 is done. A review of the result rated the code quality mixed: path traversal risk in session IDs, blocking calls inside async routes, about 40 blanket `except Exception` blocks, scattered configuration, module-level `torch` imports and thin test coverage outside the basics. The ten small steps, in three groups (P0 safety, P1 configuration and lint, P2 testability), are in `docs/REFACTOR_PLAN.md`, one commit each, with no restructuring of `src/`.
+Tier 1 is done. A review of the result rated the code quality mixed: path traversal risk in session IDs, blocking calls inside async routes, about 40 blanket `except Exception` blocks, scattered configuration, module-level `torch` imports and thin test coverage outside the basics. The ten small steps, in three groups (P0 safety, P1 configuration and lint, P2 testability), are in `docs/REFACTOR_PLAN.md`, one commit each, with no restructuring of `src/`. Implemented on `refactor/code-quality`; see the status table in that plan for what was left out.
 
 Do this before Tier 2. The typed-settings item below builds on step 4 of the refactor plan, and the evaluation script (item 9) is more trustworthy once the pipeline has tests.
 
