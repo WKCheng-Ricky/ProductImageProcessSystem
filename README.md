@@ -280,7 +280,3 @@ Use CPU mode (omit `--gpu` flag):
 ```bash
 python main.py --image photo.jpg
 ```
-
-## License
-
-Internal use.
