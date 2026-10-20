@@ -1,0 +1,15 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-m 'not model'"
+markers = ["model: loads real ML model weights (slow); run with `pytest -m model`"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["venv", "data", "uploads", "resource", "example"]
+
+[tool.ruff.lint]
+select = ["E", "F"]
+# Existing violations ignored so CI starts green; tighten one rule at a time.
+ignore = ["F401", "F541", "F841", "E501", "E741"]

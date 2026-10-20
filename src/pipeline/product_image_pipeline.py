@@ -12,8 +12,9 @@ from .collage_detector import CollageDetector
 from .config import CONFIG
 from .embedding_generator import EmbeddingGenerator, TextImageEmbeddingGenerator
 from .image_preprocessor import ImagePreprocessor
-from .milvus_db import MilvusVectorLiteDB
+# product_grouper must load before milvus_db (circular import)
 from .product_grouper import InMemoryVectorDB, ProductGroup, ProductGrouper, SearchResult, VectorDatabase
+from .milvus_db import MilvusVectorLiteDB
 from .quality_scorer import ImageQualityScorer
 from .watermark_remover import WatermarkRemover
 
