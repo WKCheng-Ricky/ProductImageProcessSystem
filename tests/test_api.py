@@ -21,25 +21,28 @@ def test_health_reports_healthy(client):
     assert response.json()["status"] == "healthy"
 
 
+SESSION_ID = "11111111-1111-4111-8111-111111111111"
+
+
 def test_unknown_session_status_is_404(client):
     assert client.get("/api/session/does-not-exist/status").status_code == 404
 
 
 def test_session_status_lists_completed_steps(client):
     manager = app.state.session_manager
-    manager.create_session("s1", {"current_step": 2, "collage_info": {}})
+    manager.create_session(SESSION_ID, {"current_step": 2, "collage_info": {}})
 
-    body = client.get("/api/session/s1/status").json()
+    body = client.get(f"/api/session/{SESSION_ID}/status").json()
 
     assert body["current_step"] == 2
     assert body["steps_completed"] == ["collage_info"]
 
 
 def test_delete_session_removes_it(client):
-    app.state.session_manager.create_session("s1", {})
+    app.state.session_manager.create_session(SESSION_ID, {})
 
-    assert client.delete("/api/session/s1").status_code == 200
-    assert client.get("/api/session/s1/status").status_code == 404
+    assert client.delete(f"/api/session/{SESSION_ID}").status_code == 200
+    assert client.get(f"/api/session/{SESSION_ID}/status").status_code == 404
 
 
 def test_upload_rejects_disallowed_extension(client):

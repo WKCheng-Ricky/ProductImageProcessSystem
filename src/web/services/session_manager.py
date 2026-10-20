@@ -10,6 +10,7 @@ Project: Product Image Processing System
 """
 
 import json
+import re
 import uuid
 import shutil
 from datetime import datetime, timedelta
@@ -18,6 +19,15 @@ from typing import Dict, Optional, Any
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Session IDs are full UUIDs; batch sessions are "batch_" + 8 hex characters.
+_VALID_SESSION_ID = re.compile(
+    r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|batch_[0-9a-f]{8}"
+)
+
+
+def is_valid_session_id(session_id: str) -> bool:
+    return bool(_VALID_SESSION_ID.fullmatch(session_id))
 
 
 class SessionManager:
@@ -38,6 +48,11 @@ class SessionManager:
         """Generate a unique session ID"""
         return str(uuid.uuid4())
 
+    def _session_dir(self, session_id: str) -> Path:
+        if not is_valid_session_id(session_id):
+            raise ValueError(f"Invalid session id: {session_id!r}")
+        return self.storage_dir / session_id
+
     def create_session(self, session_id: str, data: Dict[str, Any]) -> None:
         """
         Create a new session
@@ -46,7 +61,7 @@ class SessionManager:
             session_id: Unique session identifier
             data: Initial session data
         """
-        session_dir = self.storage_dir / session_id
+        session_dir = self._session_dir(session_id)
         session_dir.mkdir(parents=True, exist_ok=True)
 
         # Add metadata
@@ -73,7 +88,7 @@ class SessionManager:
         Raises:
             ValueError: If session not found
         """
-        session_file = self.storage_dir / session_id / "session.json"
+        session_file = self._session_dir(session_id) / "session.json"
         if not session_file.exists():
             raise ValueError(f"Session {session_id} not found")
 
@@ -92,7 +107,7 @@ class SessionManager:
         session_data.update(updates)
         session_data["updated_at"] = datetime.now().isoformat()
 
-        session_file = self.storage_dir / session_id / "session.json"
+        session_file = self._session_dir(session_id) / "session.json"
         with open(session_file, 'w', encoding='utf-8') as f:
             json.dump(session_data, f, indent=2, ensure_ascii=False)
 
@@ -105,7 +120,7 @@ class SessionManager:
         Args:
             session_id: Session identifier
         """
-        session_dir = self.storage_dir / session_id
+        session_dir = self._session_dir(session_id)
         if session_dir.exists():
             shutil.rmtree(session_dir)
             logger.info(f"Deleted session: {session_id}")
@@ -148,8 +163,10 @@ class SessionManager:
 
     def session_exists(self, session_id: str) -> bool:
         """Check if session exists"""
+        if not is_valid_session_id(session_id):
+            return False
         return (self.storage_dir / session_id / "session.json").exists()
 
     def get_session_path(self, session_id: str) -> Path:
         """Get the filesystem path for a session"""
-        return self.storage_dir / session_id
+        return self._session_dir(session_id)
