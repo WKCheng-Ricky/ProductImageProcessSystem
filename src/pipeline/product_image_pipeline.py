@@ -117,7 +117,7 @@ class ProductImagePipeline:
                         dimension=actual_dimension,
                         model_name=model_name,
                     )
-                    logger.info(f"Milvus Lite vector database initialized successfully")
+                    logger.info("Milvus Lite vector database initialized successfully")
                 except Exception as e:
                     logger.error(
                         f"USE_MILVUS=true but Milvus failed to initialize ({e}); "

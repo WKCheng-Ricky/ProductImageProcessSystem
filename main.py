@@ -329,7 +329,7 @@ def main():
         if args.preload_model:
             preload_models()
 
-        logger.info(f"Starting Web interface...")
+        logger.info("Starting Web interface...")
         logger.info(f"Visit: http://localhost:{args.port}")
         uvicorn.run(app, host="0.0.0.0", port=args.port, log_level="info")
 

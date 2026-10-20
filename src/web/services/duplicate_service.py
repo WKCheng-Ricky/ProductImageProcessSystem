@@ -99,7 +99,7 @@ def duplicate_records(n: int) -> Dict[str, Any]:
 
     return {
         "success": True,
-        "message": f"Successfully duplicated records",
+        "message": "Successfully duplicated records",
         "original_count": original_size,
         "new_count": new_size,
         "duplicates_added": duplicates_added,
