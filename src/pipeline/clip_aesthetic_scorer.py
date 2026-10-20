@@ -8,10 +8,10 @@ import logging
 
 import cv2
 import numpy as np
-import torch
 from PIL import Image
 
 from .model_cache import get_model_cache
+from .clip_loader import default_device, no_grad
 from .config import (
     AESTHETIC_FALLBACK_MODEL,
     AESTHETIC_FALLBACK_PRETRAINED,
@@ -52,7 +52,7 @@ class CLIPQualityScorer:
 
         self._model_name = model_name
         self._pretrained = pretrained
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = default_device()
 
         # Lazy loading - model will be loaded on first use
         self._model = None
@@ -140,7 +140,7 @@ class CLIPQualityScorer:
 
         image_input = self.preprocess(image).unsqueeze(0).to(self.device)
 
-        with torch.no_grad():
+        with no_grad():
             # Get image features
             image_features = self.model.encode_image(image_input)
             image_features = image_features / image_features.norm(dim=-1, keepdim=True)
@@ -213,7 +213,7 @@ class CLIPQualityScorer:
 
         image_input = self.preprocess(img).unsqueeze(0).to(self.device)
 
-        with torch.no_grad():
+        with no_grad():
             # Get image features
             image_features = self.model.encode_image(image_input)
             image_features = image_features / image_features.norm(dim=-1, keepdim=True)
@@ -288,7 +288,7 @@ class CLIPQualityScorer:
 
         image_input = self.preprocess(img).unsqueeze(0).to(self.device)
 
-        with torch.no_grad():
+        with no_grad():
             image_features = self.model.encode_image(image_input)
             image_features = image_features / image_features.norm(dim=-1, keepdim=True)
 

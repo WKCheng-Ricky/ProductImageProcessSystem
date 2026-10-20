@@ -14,10 +14,8 @@ EXPECTED_DIMENSIONS = {"ViT-B-32": 512, "ViT-L-14": 768}
 
 @pytest.fixture(scope="module")
 def generator():
-    import sys
-
-    if getattr(sys.modules.get("torch"), "IS_TEST_STUB", False):
-        pytest.skip("real torch/open_clip not installed (tests/conftest.py stubs them)")
+    pytest.importorskip("torch")
+    pytest.importorskip("open_clip")
     from src.pipeline.embedding_generator import TextImageEmbeddingGenerator
 
     return TextImageEmbeddingGenerator(device="cpu")

@@ -15,7 +15,6 @@ from dataclasses import dataclass
 from typing import List, Union
 
 import numpy as np
-import torch
 from PIL import Image
 
 try:
@@ -24,6 +23,7 @@ except ImportError:
     tqdm = None
 
 from .model_cache import get_model_cache
+from .clip_loader import default_device, no_grad
 from .config import clip_model_from_env, clip_pretrained_from_env
 
 try:
@@ -89,7 +89,7 @@ class EmbeddingGenerator:
 
         # Determine device
         if device == 'auto':
-            self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            self.device = default_device()
         else:
             self.device = device
 
@@ -156,7 +156,7 @@ class EmbeddingGenerator:
         image_input = self._preprocess(img).unsqueeze(0).to(self.device)
 
         # Generate embedding
-        with torch.no_grad():
+        with no_grad():
             features = self._model.encode_image(image_input)
 
         embedding = features.cpu().numpy().squeeze()
@@ -209,12 +209,14 @@ class EmbeddingGenerator:
             ]
 
             # Preprocessing - stack preprocessed images
+            import torch
+
             image_inputs = torch.stack([
                 self._preprocess(img) for img in batch_images
             ]).to(self.device)
 
             # Generate embeddings
-            with torch.no_grad():
+            with no_grad():
                 features = self._model.encode_image(image_inputs)
 
             embeddings = features.cpu().numpy()
@@ -324,7 +326,7 @@ class TextImageEmbeddingGenerator(EmbeddingGenerator):
         text_tokens = self._tokenizer([text]).to(self.device)
 
         # Generate embedding
-        with torch.no_grad():
+        with no_grad():
             features = self._model.encode_text(text_tokens)
 
         embedding = features.cpu().numpy().squeeze()
