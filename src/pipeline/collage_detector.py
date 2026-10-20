@@ -134,7 +134,7 @@ class CollageDetector:
 
         # Filter lines too close to edges
         margin = size * 0.1
-        lines = [l for l in lines if margin < l < size - margin]
+        lines = [pos for pos in lines if margin < pos < size - margin]
 
         return lines
 
