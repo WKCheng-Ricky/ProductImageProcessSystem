@@ -20,6 +20,7 @@ from typing import List, Optional
 from ..models.schemas import BatchUploadResponse, BatchProcessResponse, BatchImageResult
 from ..services.session_manager import SessionManager
 from ..services.pipeline_service import get_pipeline
+from src.pipeline.config import DUPLICATE_SIMILARITY_THRESHOLD
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -191,7 +192,7 @@ def process_batch(
 
 
             # Step 4: Check for duplicate before saving
-            DUPLICATE_THRESHOLD = 0.999
+            DUPLICATE_THRESHOLD = DUPLICATE_SIMILARITY_THRESHOLD
             is_duplicate = False
             duplicate_of = None
             duplicate_score = None

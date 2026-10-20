@@ -15,6 +15,12 @@ import torch
 from PIL import Image
 
 from .model_cache import get_model_cache
+from .config import (
+    AESTHETIC_FALLBACK_MODEL,
+    AESTHETIC_FALLBACK_PRETRAINED,
+    clip_model_from_env,
+    clip_pretrained_from_env,
+)
 
 try:
     from dotenv import load_dotenv
@@ -34,8 +40,8 @@ class CLIPQualityScorer:
     def __init__(self, model_name=None, pretrained=None):
         # Use environment variables if not provided
         if model_name is None:
-            env_model = os.getenv('CLIP_MODEL')
-            env_pretrained = os.getenv('CLIP_PRETRAINED')
+            env_model = clip_model_from_env()
+            env_pretrained = clip_pretrained_from_env()
             if env_model:
                 model_name = env_model
                 if env_pretrained and pretrained is None:
@@ -43,8 +49,8 @@ class CLIPQualityScorer:
             else:
                 # Fallback to default
                 # model_name = 'hf-hub:laion/CLIP-ViT-B-32-laion2B-s34B-b79K'
-                model_name = 'ViT-B-32'
-                pretrained = 'laion2b_s34b_b79k'
+                model_name = AESTHETIC_FALLBACK_MODEL
+                pretrained = AESTHETIC_FALLBACK_PRETRAINED
                 logger.info(f"Fallback used: [{model_name}, {pretrained}]")
 
         self._model_name = model_name

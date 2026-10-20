@@ -20,6 +20,7 @@ from ..models.schemas import (
 from ..services.pipeline_service import get_pipeline
 from src.pipeline.milvus_db import ProductGroupManager, ProductGroupsDB
 from src.pipeline.config import CONFIG
+from src.pipeline.config import GROUPING_SIMILARITY_THRESHOLD, GROUPING_TOP_K
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -30,15 +31,15 @@ def get_group_manager() -> ProductGroupManager:
     pipeline = get_pipeline()
     return ProductGroupManager(
         vector_db=pipeline.vector_db,
-        similarity_threshold=0.90,
-        top_k=10,
+        similarity_threshold=GROUPING_SIMILARITY_THRESHOLD,
+        top_k=GROUPING_TOP_K,
         db_path=CONFIG.get("milvus_lite_path", "./data/milvus.db"),
     )
 
 
 @router.post("/grouping/run", response_model=GroupingResultsResponse)
 def run_grouping(
-    similarity_threshold: float = 0.90,
+    similarity_threshold: float = GROUPING_SIMILARITY_THRESHOLD,
     clear_existing: bool = True,
 ):
     """

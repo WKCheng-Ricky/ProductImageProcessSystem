@@ -27,6 +27,7 @@ import numpy as np
 from PIL import Image
 
 from .collage_detector import CollageInfo
+from .config import DEFAULT_TARGET_SIZE, PIPELINE_SIMILARITY_THRESHOLD
 from .product_image_pipeline import ProductImagePipeline
 
 logger = logging.getLogger(__name__)
@@ -201,8 +202,8 @@ def preload_pipeline():
 
     logger.info("\n[1/3] Initializing ProductImagePipeline...")
     pipeline = ProductImagePipeline(
-        target_size=(512, 512),
-        similarity_threshold=0.85,
+        target_size=DEFAULT_TARGET_SIZE,
+        similarity_threshold=PIPELINE_SIMILARITY_THRESHOLD,
         quality_threshold=0.3,
         use_gpu=False,
         output_dir=None

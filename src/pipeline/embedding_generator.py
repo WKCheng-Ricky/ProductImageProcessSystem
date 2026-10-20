@@ -26,6 +26,7 @@ except ImportError:
     tqdm = None
 
 from .model_cache import get_model_cache
+from .config import clip_model_from_env, clip_pretrained_from_env
 
 try:
     from dotenv import load_dotenv
@@ -70,8 +71,8 @@ class EmbeddingGenerator:
         """
         # Use environment variables if model_name not provided
         if model_name is None:
-            env_model = os.getenv('CLIP_MODEL')
-            env_pretrained = os.getenv('CLIP_PRETRAINED')
+            env_model = clip_model_from_env()
+            env_pretrained = clip_pretrained_from_env()
             if env_model and env_pretrained:
                 # Check if this combination exists in SUPPORTED_MODELS
                 for key, (arch, pretrained) in self.SUPPORTED_MODELS.items():

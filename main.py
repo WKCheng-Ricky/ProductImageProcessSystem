@@ -33,6 +33,13 @@ import uvicorn
 from PIL import Image
 
 from src.logging_config import configure_logging
+from src.pipeline.config import (
+    DEFAULT_CLIP_MODEL,
+    DEFAULT_CLIP_PRETRAINED,
+    PIPELINE_SIMILARITY_THRESHOLD,
+    clip_model_from_env,
+    clip_pretrained_from_env,
+)
 from src.pipeline.model_cache import get_model_cache
 from src.pipeline.product_grouper import ProductGrouper
 from src.pipeline.product_image_pipeline import ProductImagePipeline
@@ -57,8 +64,8 @@ def preload_models():
     cache = get_model_cache()
 
     # Get CLIP model configuration from environment
-    clip_model = os.getenv('CLIP_MODEL', 'ViT-B-32')
-    clip_pretrained = os.getenv('CLIP_PRETRAINED', 'openai')
+    clip_model = clip_model_from_env() or DEFAULT_CLIP_MODEL
+    clip_pretrained = clip_pretrained_from_env() or DEFAULT_CLIP_PRETRAINED
 
     logger.info(f"CLIP_MODEL={clip_model}, CLIP_PRETRAINED={clip_pretrained}")
 
@@ -250,7 +257,7 @@ def main():
     parser.add_argument(
         "--threshold",
         type=float,
-        default=0.85,
+        default=PIPELINE_SIMILARITY_THRESHOLD,
         help="Similarity threshold (default: 0.85)",
     )
     parser.add_argument(

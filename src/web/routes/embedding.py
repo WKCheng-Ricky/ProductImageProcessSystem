@@ -19,6 +19,7 @@ from typing import Optional
 from ..models.schemas import EmbeddingResultResponse
 from ..services.session_manager import SessionManager
 from ..services.pipeline_service import get_pipeline
+from src.pipeline.config import DUPLICATE_SIMILARITY_THRESHOLD
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -108,7 +109,7 @@ def generate_embedding(
     is_duplicate = False
     duplicate_of = None
     duplicate_score = None
-    DUPLICATE_THRESHOLD = 0.999
+    DUPLICATE_THRESHOLD = DUPLICATE_SIMILARITY_THRESHOLD
 
     try:
         existing_results = pipeline.vector_db.search(

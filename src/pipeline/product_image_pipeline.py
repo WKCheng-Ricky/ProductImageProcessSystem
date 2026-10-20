@@ -9,7 +9,7 @@ from PIL import Image
 
 from .best_image_selector import BestImageSelector
 from .collage_detector import CollageDetector
-from .config import CONFIG
+from .config import CONFIG, DEFAULT_TARGET_SIZE, PIPELINE_SIMILARITY_THRESHOLD, QUALITY_THRESHOLD
 from .embedding_generator import EmbeddingGenerator, TextImageEmbeddingGenerator
 from .image_preprocessor import ImagePreprocessor
 # product_grouper must load before milvus_db (circular import)
@@ -48,9 +48,9 @@ class ProductImagePipeline:
 
     def __init__(
         self,
-        target_size: tuple = (512, 512),
-        similarity_threshold: float = 0.85,
-        quality_threshold: float = 0.3,
+        target_size: tuple = DEFAULT_TARGET_SIZE,
+        similarity_threshold: float = PIPELINE_SIMILARITY_THRESHOLD,
+        quality_threshold: float = QUALITY_THRESHOLD,
         use_gpu: bool = False,
         output_dir: Optional[str] = None,
     ):

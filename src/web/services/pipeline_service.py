@@ -13,6 +13,12 @@ import logging
 import threading
 
 from src.pipeline.product_image_pipeline import ProductImagePipeline
+from src.pipeline.config import (
+    DEFAULT_OUTPUT_DIR,
+    DEFAULT_TARGET_SIZE,
+    PIPELINE_SIMILARITY_THRESHOLD,
+    QUALITY_THRESHOLD,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -44,11 +50,11 @@ class PipelineService:
     def _build_pipeline() -> ProductImagePipeline:
         logger.info("Initializing ProductImagePipeline (first time - may take ~30s)")
         pipeline = ProductImagePipeline(
-            target_size=(512, 512),
-            similarity_threshold=0.85,
-            quality_threshold=0.3,
+            target_size=DEFAULT_TARGET_SIZE,
+            similarity_threshold=PIPELINE_SIMILARITY_THRESHOLD,
+            quality_threshold=QUALITY_THRESHOLD,
             use_gpu=False,  # Change to True if GPU available
-            output_dir="uploads/processed"
+            output_dir=DEFAULT_OUTPUT_DIR
         )
         db_type = type(pipeline.vector_db).__name__
         logger.info(f"Pipeline initialized successfully with {db_type}")

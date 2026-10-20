@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 from .product_grouper import ProductGroupUUID, SearchResult, VectorDatabase
+from .config import GROUPING_SIMILARITY_THRESHOLD, GROUPING_TOP_K
 
 try:
     from pymilvus import MilvusClient, DataType
@@ -441,8 +442,8 @@ class ProductGroupManager:
         self,
         vector_db: VectorDatabase,
         groups_db: Optional[ProductGroupsDB] = None,
-        similarity_threshold: float = 0.90,
-        top_k: int = 10,
+        similarity_threshold: float = GROUPING_SIMILARITY_THRESHOLD,
+        top_k: int = GROUPING_TOP_K,
         db_path: str = "./data/milvus.db",
     ):
         self.vector_db = vector_db
