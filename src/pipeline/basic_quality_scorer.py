@@ -311,8 +311,3 @@ class BasicQualityScorer:
         results.sort(key=lambda x: x[1].overall, reverse=True)
 
         return results
-
-
-if __name__ == "__main__":
-    scorer = BasicQualityScorer()
-    print("BasicQualityScorer module loaded successfully.")

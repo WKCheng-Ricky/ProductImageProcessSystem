@@ -61,11 +61,3 @@ def get_config() -> Dict[str, Any]:
 
 # Global config instance (loaded once)
 CONFIG = get_config()
-
-
-if __name__ == "__main__":
-    # Test configuration
-    config = get_config()
-    print("Current Configuration:")
-    for key, value in config.items():
-        print(f"  {key}: {value}")

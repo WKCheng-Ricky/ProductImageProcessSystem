@@ -394,7 +394,3 @@ class TextImageEmbeddingGenerator(EmbeddingGenerator):
         results = [(int(idx), float(similarities[idx])) for idx in indices]
 
         return results
-
-if __name__ == "__main__":
-    generator = EmbeddingGenerator()
-    print("Embedding Generator module loaded successfully.")

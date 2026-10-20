@@ -511,17 +511,3 @@ class ImagePreprocessor:
 
 
 # Usage example
-if __name__ == "__main__":
-    # Initialize preprocessor
-    preprocessor = ImagePreprocessor(
-        target_size=(512, 512),
-        background_color=(255, 255, 255),
-        padding_ratio=0.1,
-    )
-
-    # Process single image
-    # img = Image.open("test_image.jpg")
-    # result = preprocessor.standardize(img)
-    # result.image.save("processed_image.jpg")
-
-    print("Image Preprocessor module loaded successfully.")

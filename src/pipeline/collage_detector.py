@@ -522,20 +522,3 @@ class CollageDetector:
 
 
 # Usage example
-if __name__ == "__main__":
-    # Initialize detector
-    detector = CollageDetector()
-
-    # Detect collage
-    # img = Image.open("collage_image.jpg")
-    # info = detector.is_collage(img)
-    # print(f"Is collage: {info.is_collage}")
-    # print(f"Num images: {info.num_images}")
-    # print(f"Layout: {info.layout}")
-
-    # Split collage
-    # result = detector.smart_split(img)
-    # for i, split_img in enumerate(result.images):
-    #     split_img.save(f"split_{i}.jpg")
-
-    print("Collage Detector module loaded successfully.")

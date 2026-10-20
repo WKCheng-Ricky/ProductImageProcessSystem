@@ -324,14 +324,3 @@ class WatermarkRemover:
 
 
 # Usage example
-if __name__ == "__main__":
-    # Initialize remover
-    remover = WatermarkRemover(use_ocr=False)  # Use simple method first
-
-    # Remove watermarks
-    # img = Image.open("product_with_watermark.jpg")
-    # result = remover.remove_watermark(img)
-    # result.image.save("product_clean.jpg")
-    # print(f"Removed {result.watermarks_removed} watermarks")
-
-    print("Watermark Remover module loaded successfully.")

@@ -83,8 +83,3 @@ class AestheticScorer:
             Overall aesthetic score (1-10)
         """
         return self._scorer.score(img)
-
-
-if __name__ == "__main__":
-    scorer = AestheticScorer()
-    print("AestheticScorer module loaded successfully.")

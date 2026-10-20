@@ -138,7 +138,7 @@ class CLIPQualityScorer:
         try:
             image = Image.open(image_path).convert('RGB')
         except Exception as e:
-            print(f"Error loading {image_path}: {e}")
+            logger.error(f"Error loading {image_path}: {e}")
             return 0.0, 0.0, 0.0
 
         image_input = self.preprocess(image).unsqueeze(0).to(self.device)
@@ -376,82 +376,4 @@ class CLIPQualityScorer:
             'defect_score_est': normalize(defect_score, -0.05, 0.06),
             'defect_score': defect_score_pct,
             'aesthetic_overall': float(final_score),
-        }                                                                 
-                                                                        
-                                                                     
-
-
-def main():
-    """Score all images in test_clip directory"""
-    test_dir = Path("test_clip")
-
-    if not test_dir.exists():
-        print(f"Error: Directory {test_dir} not found")
-        return
-
-    # Initialize scorer
-    scorer = CLIPQualityScorer()
-    print("\n" + "="*70)
-    print("Scoring images...")
-    print("="*70 + "\n")
-
-    # Get all image files
-    image_files = []
-    for ext in ['*.jpg', '*.jpeg', '*.png', '*.webp', '*.JPG', '*.JPEG', '*.PNG', '*.WEBP']:
-        image_files.extend(test_dir.glob(ext))
-
-    image_files = sorted(image_files)
-
-    if not image_files:
-        print(f"No images found in {test_dir}")
-        return
-
-    # Score each image
-    results = []
-    for img_path in image_files:
-        score, pos_sim, neg_sim = scorer.score_image(img_path)
-        results.append({
-            'filename': img_path.name,
-            'score': score,
-            'positive_sim': pos_sim,
-            'negative_sim': neg_sim,
-            'raw_diff': pos_sim - neg_sim
-        })
-
-        # Color code output
-        if 'good' in img_path.name.lower():
-            prefix = "✓ GOOD "
-        elif 'trash' in img_path.name.lower():
-            prefix = "✗ TRASH"
-        else:
-            prefix = "  ?????"
-
-        print(f"{prefix} | {img_path.name:20s} | Score: {score:5.2f}/10 | "
-              f"Pos: {pos_sim:.3f} | Neg: {neg_sim:.3f} | Diff: {pos_sim - neg_sim:.3f}")
-
-    # Summary statistics
-    print("\n" + "="*70)
-    print("SUMMARY")
-    print("="*70)
-
-    good_scores = [r['score'] for r in results if 'good' in r['filename'].lower()]
-    trash_scores = [r['score'] for r in results if 'trash' in r['filename'].lower()]
-
-    if good_scores:
-        print(f"\nGOOD images (target: >5, ideally 9-10):")
-        print(f"  Average: {np.mean(good_scores):.2f}")
-        print(f"  Range: {min(good_scores):.2f} - {max(good_scores):.2f}")
-
-    if trash_scores:
-        print(f"\nTRASH images (target: <5, ideally 2-3):")
-        print(f"  Average: {np.mean(trash_scores):.2f}")
-        print(f"  Range: {min(trash_scores):.2f} - {max(trash_scores):.2f}")
-
-    if good_scores and trash_scores:
-        separation = np.mean(good_scores) - np.mean(trash_scores)
-        print(f"\nSeparation: {separation:.2f} points")
-        print(f"Status: {'✓ GOOD' if separation > 3 else '✗ NEEDS IMPROVEMENT'}")
-
-
-if __name__ == "__main__":
-    main()
+        }
