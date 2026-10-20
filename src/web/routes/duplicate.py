@@ -40,7 +40,7 @@ def get_stats():
         return stats
     except Exception as e:
         logger.error(f"Error getting database stats: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/duplicate/backups")
@@ -51,7 +51,7 @@ def get_backups():
         return {"backups": backups}
     except Exception as e:
         logger.error(f"Error listing backups: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/duplicate", response_model=DuplicateResponse)
@@ -72,4 +72,4 @@ def duplicate_database(request: DuplicateRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error during duplication: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

@@ -57,7 +57,7 @@ def split_collage(
         img = Image.open(original_path).convert('RGB')
     except Exception as e:
         logger.error(f"Error loading image: {e}")
-        raise HTTPException(status_code=500, detail=f"Error loading image: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error loading image")
 
     # Get collage info
     collage_data = session["collage_info"]
@@ -104,7 +104,7 @@ def split_collage(
         logger.info(f"Split collage into {len(split_result.images)} images")
     except Exception as e:
         logger.error(f"Error splitting collage: {e}")
-        raise HTTPException(status_code=500, detail=f"Error splitting collage: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error splitting collage")
 
     # Save split images
     session_path = session_manager.get_session_path(session_id)
@@ -126,7 +126,7 @@ def split_collage(
             split_urls.append(f"/uploads/sessions/{session_id}/split_images/image_{i}.jpg")
         except Exception as e:
             logger.error(f"Error saving split image {i}: {e}")
-            raise HTTPException(status_code=500, detail=f"Error saving split image: {str(e)}")
+            raise HTTPException(status_code=500, detail="Error saving split image")
 
     # Update session
     split_data = {
@@ -143,7 +143,7 @@ def split_collage(
         })
     except Exception as e:
         logger.error(f"Error updating session: {e}")
-        raise HTTPException(status_code=500, detail=f"Error updating session: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error updating session")
 
     return CollageSplitResultResponse(
         num_images=len(split_paths),
@@ -182,4 +182,4 @@ def get_split_results(
         raise
     except Exception as e:
         logger.error(f"Error retrieving split results: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

@@ -242,7 +242,7 @@ def process_batch(
 
         except Exception as e:
             logger.error(f"Error processing {filename}: {e}")
-            result.error = str(e)
+            result.error = f"Processing failed ({type(e).__name__}); see server logs"
             failed += 1
 
         finally:

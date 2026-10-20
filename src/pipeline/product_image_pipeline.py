@@ -119,7 +119,11 @@ class ProductImagePipeline:
                     )
                     logger.info(f"Milvus Lite vector database initialized successfully")
                 except Exception as e:
-                    logger.warning(f"Failed to initialize Milvus ({e}), falling back to InMemoryVectorDB")
+                    logger.error(
+                        f"USE_MILVUS=true but Milvus failed to initialize ({e}); "
+                        "falling back to InMemoryVectorDB - embeddings will NOT be persisted",
+                        exc_info=True,
+                    )
                     self._vector_db = InMemoryVectorDB()
             else:
                 logger.info("Using InMemoryVectorDB (USE_MILVUS=false)")

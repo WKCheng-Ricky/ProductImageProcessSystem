@@ -65,7 +65,7 @@ def remove_watermarks(
         img = Image.open(original_path).convert('RGB')
     except Exception as e:
         logger.error(f"Error loading image: {e}")
-        raise HTTPException(status_code=500, detail=f"Error loading image: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error loading image")
 
     # Get pipeline and remove watermarks
     try:
@@ -76,7 +76,7 @@ def remove_watermarks(
                    f"removed={watermark_result.watermarks_removed}")
     except Exception as e:
         logger.error(f"Error removing watermarks: {e}")
-        raise HTTPException(status_code=500, detail=f"Error removing watermarks: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error removing watermarks")
 
     # Save watermark-removed image
     session_path = session_manager.get_session_path(session_id)
@@ -91,7 +91,7 @@ def remove_watermarks(
             logger.info(f"Saved watermark-removed image to {watermark_removed_path}")
         except Exception as e:
             logger.error(f"Error saving watermark-removed image: {e}")
-            raise HTTPException(status_code=500, detail=f"Error saving image: {str(e)}")
+            raise HTTPException(status_code=500, detail="Error saving image")
 
     # Convert watermark regions to response format
     regions = [
@@ -118,7 +118,7 @@ def remove_watermarks(
         })
     except Exception as e:
         logger.error(f"Error updating session: {e}")
-        raise HTTPException(status_code=500, detail=f"Error updating session: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error updating session")
 
     # Get original image URL
     original_url = f"/uploads/sessions/{session_id}/original{file_ext}"
@@ -167,4 +167,4 @@ def get_watermark_results(
         raise
     except Exception as e:
         logger.error(f"Error retrieving watermark results: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

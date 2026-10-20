@@ -86,7 +86,7 @@ def upload_image(
         logger.info(f"Saved original image to {original_path}")
     except Exception as e:
         logger.error(f"Error saving image: {e}")
-        raise HTTPException(status_code=500, detail=f"Error saving image: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error saving image")
 
     # Get pipeline
     pipeline = get_pipeline()
@@ -130,7 +130,7 @@ def upload_image(
             logger.error(f"Error in collage detection: {e}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Error detecting collage: {str(e)}"
+                detail="Error detecting collage"
             )
     else:
         # Create a default "not collage" result
@@ -165,7 +165,7 @@ def upload_image(
         session_manager.create_session(session_id, session_data)
     except Exception as e:
         logger.error(f"Error creating session: {e}")
-        raise HTTPException(status_code=500, detail=f"Error creating session: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error creating session")
 
     # Prepare response
     collage_response = CollageInfoResponse(
@@ -206,4 +206,4 @@ def get_collage_info(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Error retrieving collage info: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

@@ -68,7 +68,7 @@ def search_similar_products(
         logger.info(f"Loaded embedding from {embedding_path}, shape: {embedding.shape}")
     except Exception as e:
         logger.error(f"Error loading embedding: {e}")
-        raise HTTPException(status_code=500, detail=f"Error loading embedding: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error loading embedding")
 
     # Search for similar products
     try:
@@ -93,7 +93,7 @@ def search_similar_products(
             logger.warning(f"No similar products found (database has {db_size} embeddings)")
     except Exception as e:
         logger.error(f"Error searching for similar products: {e}")
-        raise HTTPException(status_code=500, detail=f"Error searching: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error searching")
 
     # Convert results to response format
     result_items = []
@@ -148,7 +148,7 @@ def search_similar_products(
         })
     except Exception as e:
         logger.error(f"Error updating session: {e}")
-        raise HTTPException(status_code=500, detail=f"Error updating session: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error updating session")
 
     return SearchResultsResponse(
         results=result_items,
@@ -202,7 +202,7 @@ def search_by_image_id(
         raise
     except Exception as e:
         logger.error(f"Error searching for similar products: {e}")
-        raise HTTPException(status_code=500, detail=f"Error searching: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error searching")
 
     # Convert results to response format
     result_items = []
@@ -277,7 +277,7 @@ def get_search_results(
         raise
     except Exception as e:
         logger.error(f"Error retrieving search results: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/search/by-text", response_model=TextSearchResultsResponse)
@@ -323,7 +323,7 @@ def search_by_text(request: TextSearchRequest):
         raise HTTPException(status_code=500, detail="Text search not available: embedding generator not found")
     except Exception as e:
         logger.error(f"Error in text search: {e}")
-        raise HTTPException(status_code=500, detail=f"Error searching: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error searching")
 
     # Convert results to response format
     result_items = []

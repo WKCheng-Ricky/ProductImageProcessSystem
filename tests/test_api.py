@@ -75,3 +75,29 @@ def test_ready_returns_503_when_storage_unwritable(client, tmp_path, monkeypatch
 
     assert response.status_code == 503
     assert response.json()["status"] == "not_ready"
+
+
+def _png_bytes():
+    buffer = io.BytesIO()
+    Image.new("RGB", (64, 64), "white").save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def test_internal_errors_do_not_leak_exception_text(client, monkeypatch):
+    class ExplodingCollageDetector:
+        def is_collage(self, image):
+            raise RuntimeError("secret internal detail /srv/models/key")
+
+    class StubPipeline:
+        collage_detector = ExplodingCollageDetector()
+
+    monkeypatch.setattr("src.web.routes.upload.get_pipeline", lambda: StubPipeline())
+
+    response = client.post(
+        "/api/upload",
+        params={"skip_watermark_removal": True},
+        files={"file": ("a.png", _png_bytes(), "image/png")},
+    )
+
+    assert response.status_code == 500
+    assert "secret" not in response.text

@@ -78,7 +78,7 @@ def generate_embedding(
         logger.info(f"Generating embedding for: {image_path}")
     except Exception as e:
         logger.error(f"Error loading image: {e}")
-        raise HTTPException(status_code=500, detail=f"Error loading image: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error loading image")
 
     # Generate embedding (may take time on first request)
     try:
@@ -92,7 +92,7 @@ def generate_embedding(
         logger.info(f"Embedding generated in {generation_time:.2f}s, model: {embedding_result.model_name}, dimension: {embedding_result.dimension}")
     except Exception as e:
         logger.error(f"Error generating embedding: {e}")
-        raise HTTPException(status_code=500, detail=f"Error generating embedding: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error generating embedding")
 
     # Save embedding
     session_path = session_manager.get_session_path(session_id)
@@ -103,7 +103,7 @@ def generate_embedding(
         logger.info(f"Saved embedding to {embedding_path}")
     except Exception as e:
         logger.error(f"Error saving embedding: {e}")
-        raise HTTPException(status_code=500, detail=f"Error saving embedding: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error saving embedding")
 
     # Check for duplicate before inserting
     is_duplicate = False
@@ -179,7 +179,7 @@ def generate_embedding(
         })
     except Exception as e:
         logger.error(f"Error updating session: {e}")
-        raise HTTPException(status_code=500, detail=f"Error updating session: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error updating session")
 
     return EmbeddingResultResponse(
         model_name=embedding_result.model_name,
@@ -226,4 +226,4 @@ def get_embedding_info(
         raise
     except Exception as e:
         logger.error(f"Error retrieving embedding info: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

@@ -121,7 +121,7 @@ def run_grouping(
 
     except Exception as e:
         logger.error(f"Error running grouping: {e}")
-        raise HTTPException(status_code=500, detail=f"Error running grouping: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error running grouping")
 
 
 @router.get("/grouping/results", response_model=GroupingResultsResponse)
@@ -179,7 +179,7 @@ def get_grouping_results():
 
     except Exception as e:
         logger.error(f"Error getting grouping results: {e}")
-        raise HTTPException(status_code=500, detail=f"Error getting results: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error getting results")
 
 
 @router.get("/grouping/stats", response_model=GroupingStatsResponse)
@@ -225,7 +225,7 @@ def get_grouping_stats():
 
     except Exception as e:
         logger.error(f"Error getting grouping stats: {e}")
-        raise HTTPException(status_code=500, detail=f"Error getting stats: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error getting stats")
 
 
 @router.get("/grouping/group/{group_id}", response_model=ProductGroupResult)
@@ -273,4 +273,4 @@ def get_group_by_id(group_id: str):
         raise
     except Exception as e:
         logger.error(f"Error getting group {group_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error getting group: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error getting group")
