@@ -32,6 +32,7 @@ import numpy as np
 import uvicorn
 from PIL import Image
 
+from src.logging_config import configure_logging
 from src.pipeline.model_cache import get_model_cache
 from src.pipeline.product_grouper import ProductGrouper
 from src.pipeline.product_image_pipeline import ProductImagePipeline
@@ -43,11 +44,7 @@ try:
 except ImportError:
     pass
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+configure_logging()
 logger = logging.getLogger(__name__)
 
 
