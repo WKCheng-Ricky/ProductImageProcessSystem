@@ -37,7 +37,7 @@ def get_group_manager() -> ProductGroupManager:
 
 
 @router.post("/grouping/run", response_model=GroupingResultsResponse)
-async def run_grouping(
+def run_grouping(
     similarity_threshold: float = 0.90,
     clear_existing: bool = True,
 ):
@@ -124,7 +124,7 @@ async def run_grouping(
 
 
 @router.get("/grouping/results", response_model=GroupingResultsResponse)
-async def get_grouping_results():
+def get_grouping_results():
     """
     Get all existing product groups.
 
@@ -182,7 +182,7 @@ async def get_grouping_results():
 
 
 @router.get("/grouping/stats", response_model=GroupingStatsResponse)
-async def get_grouping_stats():
+def get_grouping_stats():
     """
     Get statistics about product grouping.
 
@@ -228,7 +228,7 @@ async def get_grouping_stats():
 
 
 @router.get("/grouping/group/{group_id}", response_model=ProductGroupResult)
-async def get_group_by_id(group_id: str):
+def get_group_by_id(group_id: str):
     """
     Get a specific group by its UUID.
     """

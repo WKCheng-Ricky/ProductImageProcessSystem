@@ -37,7 +37,7 @@ async def watermark_page(request: Request, session_id: str):
 
 
 @router.post("/session/{session_id}/watermark", response_model=WatermarkRemovalResponse)
-async def remove_watermarks(
+def remove_watermarks(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):
@@ -134,7 +134,7 @@ async def remove_watermarks(
 
 
 @router.get("/session/{session_id}/watermark", response_model=WatermarkRemovalResponse)
-async def get_watermark_results(
+def get_watermark_results(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):

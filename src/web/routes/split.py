@@ -28,7 +28,7 @@ def get_session_manager(request: Request) -> SessionManager:
 
 
 @router.post("/session/{session_id}/split", response_model=CollageSplitResultResponse)
-async def split_collage(
+def split_collage(
     session_id: str,
     selected_indices: Optional[List[int]] = None,
     session_manager: SessionManager = Depends(get_session_manager)
@@ -153,7 +153,7 @@ async def split_collage(
 
 
 @router.get("/session/{session_id}/split", response_model=CollageSplitResultResponse)
-async def get_split_results(
+def get_split_results(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):

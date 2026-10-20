@@ -33,7 +33,7 @@ def get_session_manager(request: Request) -> SessionManager:
 
 
 @router.post("/upload", response_model=UploadResponse)
-async def upload_image(
+def upload_image(
     file: UploadFile = File(...),
     skip_watermark_removal: bool = False,
     skip_collage_detection: bool = False,
@@ -59,7 +59,7 @@ async def upload_image(
 
     # Read file content
     try:
-        content = await file.read()
+        content = file.file.read()
         if len(content) > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=400,
@@ -186,7 +186,7 @@ async def upload_image(
 
 
 @router.get("/session/{session_id}/collage", response_model=CollageInfoResponse)
-async def get_collage_info(
+def get_collage_info(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):

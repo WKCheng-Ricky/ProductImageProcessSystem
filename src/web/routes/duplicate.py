@@ -33,7 +33,7 @@ class DuplicateResponse(BaseModel):
 
 
 @router.get("/duplicate/stats")
-async def get_stats():
+def get_stats():
     """Get current database statistics."""
     try:
         stats = get_database_stats()
@@ -44,7 +44,7 @@ async def get_stats():
 
 
 @router.get("/duplicate/backups")
-async def get_backups():
+def get_backups():
     """List all backup files."""
     try:
         backups = list_backups()
@@ -55,7 +55,7 @@ async def get_backups():
 
 
 @router.post("/duplicate", response_model=DuplicateResponse)
-async def duplicate_database(request: DuplicateRequest):
+def duplicate_database(request: DuplicateRequest):
     """
     Backup and duplicate all records in the database.
 

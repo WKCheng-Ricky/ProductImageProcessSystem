@@ -26,7 +26,7 @@ def get_session_manager(request: Request) -> SessionManager:
 
 
 @router.post("/session/{session_id}/preprocess", response_model=PreprocessingResultResponse)
-async def preprocess_image(
+def preprocess_image(
     session_id: str,
     remove_bg: bool = True,
     crop: bool = True,
@@ -135,7 +135,7 @@ async def preprocess_image(
 
 
 @router.post("/session/{session_id}/preprocess/bypass")
-async def bypass_preprocessing(
+def bypass_preprocessing(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):
@@ -199,7 +199,7 @@ async def bypass_preprocessing(
 
 
 @router.get("/session/{session_id}/preprocess", response_model=PreprocessingResultResponse)
-async def get_preprocessing_results(
+def get_preprocessing_results(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):

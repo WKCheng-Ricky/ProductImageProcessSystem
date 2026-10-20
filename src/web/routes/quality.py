@@ -31,7 +31,7 @@ def get_session_manager(request: Request) -> SessionManager:
 
 
 @router.post("/session/{session_id}/quality", response_model=QualityScoreResponse)
-async def score_quality(
+def score_quality(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):
@@ -117,7 +117,7 @@ async def score_quality(
 
 
 @router.get("/session/{session_id}/quality", response_model=QualityScoreResponse)
-async def get_quality_score(
+def get_quality_score(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):

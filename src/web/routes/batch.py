@@ -295,7 +295,7 @@ def process_batch(
 
 
 @router.get("/batch/{batch_id}/status")
-async def get_batch_status(
+def get_batch_status(
     batch_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):

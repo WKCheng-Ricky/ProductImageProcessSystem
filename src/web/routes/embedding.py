@@ -29,7 +29,7 @@ def get_session_manager(request: Request) -> SessionManager:
 
 
 @router.post("/session/{session_id}/embedding", response_model=EmbeddingResultResponse)
-async def generate_embedding(
+def generate_embedding(
     session_id: str,
     id: Optional[str] = None,
     session_manager: SessionManager = Depends(get_session_manager)
@@ -194,7 +194,7 @@ async def generate_embedding(
 
 
 @router.get("/session/{session_id}/embedding", response_model=EmbeddingResultResponse)
-async def get_embedding_info(
+def get_embedding_info(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):

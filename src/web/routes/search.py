@@ -28,7 +28,7 @@ def get_session_manager(request: Request) -> SessionManager:
 
 
 @router.post("/session/{session_id}/search", response_model=SearchResultsResponse)
-async def search_similar_products(
+def search_similar_products(
     session_id: str,
     top_k: int = 10,
     threshold: float = 0.70,
@@ -158,7 +158,7 @@ async def search_similar_products(
 
 
 @router.get("/search/by-image/{image_id}", response_model=SearchResultsResponse)
-async def search_by_image_id(
+def search_by_image_id(
     image_id: str,
     top_k: int = 10,
     threshold: float = 0.70
@@ -231,7 +231,7 @@ async def search_by_image_id(
 
 
 @router.get("/session/{session_id}/search", response_model=SearchResultsResponse)
-async def get_search_results(
+def get_search_results(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):
@@ -281,7 +281,7 @@ async def get_search_results(
 
 
 @router.post("/search/by-text", response_model=TextSearchResultsResponse)
-async def search_by_text(request: TextSearchRequest):
+def search_by_text(request: TextSearchRequest):
     """
     Search for products by text description.
 
