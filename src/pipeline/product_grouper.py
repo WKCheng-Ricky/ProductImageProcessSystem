@@ -294,7 +294,7 @@ class ProductGrouper:
                 if embedding_dim is None:
                     embedding_dim = len(rep_result.embedding)
             else:
-                dim = embedding_dim if embedding_dim is not None else 768
+                dim = embedding_dim if embedding_dim is not None else 512
                 group_embeddings.append(np.zeros(dim))
 
         group_embeddings = np.array(group_embeddings)

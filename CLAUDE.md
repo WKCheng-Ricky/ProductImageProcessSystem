@@ -53,7 +53,7 @@ Backgrounds, watermarks, and text overlays distort embeddings. Cleaning first en
 3. **BestImageSelector** — picks highest quality from collage splits (uses scorer + preprocessor internally)
 4. **ImagePreprocessor** — rembg/U2Net background removal, crops to product
 5. **ImageQualityScorer** — facade combining `BasicQualityScorer` (cv2 metrics) + `AestheticScorer` (CLIP-based LAION predictor)
-6. **TextImageEmbeddingGenerator** — open_clip ViT-L-14; supports both image and text queries
+6. **TextImageEmbeddingGenerator** — open_clip ViT-B-32 (ViT-L-14 optional); supports both image and text queries
 7. **ProductGrouper** — wraps `VectorDatabase`, runs DBSCAN clustering for grouping
 
 Embedding generator, vector DB, and product grouper are lazy-loaded properties — they only initialize on first access to avoid loading CLIP/rembg at startup.
@@ -96,7 +96,7 @@ Via `.env` file or environment variables:
 USE_MILVUS=true                      # Persistent vector DB (default: false)
 MILVUS_LITE_PATH=./data/milvus.db    # Milvus Lite file path
 MILVUS_COLLECTION=product_embeddings
-CLIP_MODEL=ViT-L-14                  # CLIP model variant (default: ViT-L-14)
+CLIP_MODEL=ViT-B-32                  # CLIP model variant (default: ViT-B-32; ViT-L-14 optional)
 CLIP_PRETRAINED=openai               # Pretrained weights (default: openai)
 ```
 
@@ -110,7 +110,7 @@ Pipeline constructor parameters (override per-instance):
 | Component | Technology |
 |-----------|------------|
 | Background Removal | rembg (U2Net) |
-| Embedding Model | open_clip (ViT-L-14) |
+| Embedding Model | open_clip (ViT-B-32, ViT-L-14 optional) |
 | Quality Scoring | LAION aesthetic predictor (CLIP-based) |
 | Vector DB | InMemoryVectorDB (dev) / Milvus Lite (prod) |
 | Clustering | DBSCAN (scikit-learn) |

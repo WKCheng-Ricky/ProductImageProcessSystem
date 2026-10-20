@@ -8,7 +8,7 @@
 
 A multimodal product-image pipeline (CLIP embeddings, vector search, clustering), built almost entirely with Claude Code from specs and prompts, then verified with tests and CI.
 
-Product photos are cleaned (watermarks, collages, backgrounds), scored for quality, embedded with CLIP ViT-L-14 (text and images share one embedding space), stored in a vector database, and then used for similarity search, duplicate detection and DBSCAN product grouping. It is designed for an e-commerce catalog of 2M+ SKUs.
+Product photos are cleaned (watermarks, collages, backgrounds), scored for quality, embedded with CLIP ViT-B-32, with ViT-L-14 as an option (text and images share one embedding space), stored in a vector database, and then used for similarity search, duplicate detection and DBSCAN product grouping. It is designed for an e-commerce catalog of 2M+ SKUs.
 
 ## Features
 
@@ -17,7 +17,7 @@ Product photos are cleaned (watermarks, collages, backgrounds), scored for quali
 - **Background Removal**: Remove backgrounds and standardize to white (rembg/U2Net)
 - **Quality Scoring**: Evaluate sharpness, brightness using LAION aesthetic predictor
 - **Best Image Selection**: Automatically select the best main image from multiple SKU photos
-- **CLIP Embeddings**: Generate vector embeddings for image search (open_clip ViT-L-14)
+- **CLIP Embeddings**: Generate vector embeddings for image search (open_clip ViT-B-32)
 - **Duplicate Detection**: Find duplicate SKUs using vector similarity
 - **Product Grouping**: Cluster similar SKUs using DBSCAN
 - **Web Interface**: Interactive multi-page UI for visualizing the processing pipeline
@@ -151,7 +151,7 @@ flowchart TD
     C --> D[Best image selection]
     D --> E[Background removal and crop]
     E --> F[Quality scoring: basic + LAION aesthetic]
-    F --> G[CLIP embedding ViT-L-14]
+    F --> G[CLIP embedding ViT-B-32]
     G --> H[(Vector DB: in-memory or Milvus Lite)]
     H --> I[Search, duplicate detection, DBSCAN grouping]
 ```
@@ -164,7 +164,7 @@ Environment variables (via `.env` or shell):
 USE_MILVUS=true                      # Enable persistent vector DB (default: false)
 MILVUS_LITE_PATH=./data/milvus.db
 MILVUS_COLLECTION=product_embeddings
-CLIP_MODEL=ViT-L-14                  # CLIP model variant
+CLIP_MODEL=ViT-B-32                  # CLIP model variant (default: ViT-B-32; ViT-L-14 optional)
 CLIP_PRETRAINED=openai               # Pretrained weights
 ```
 
@@ -252,7 +252,7 @@ best_idx, best_img, scores = pipeline.select_best_from_sku(image_paths)
 | Component | Technology |
 |-----------|------------|
 | Background Removal | rembg (U2Net) |
-| Embedding Model | open_clip (ViT-L-14) |
+| Embedding Model | open_clip (ViT-B-32, ViT-L-14 optional) |
 | Quality Scoring | LAION aesthetic predictor |
 | Vector DB | InMemoryVectorDB (dev) / Milvus Lite (prod) |
 | Clustering | DBSCAN |

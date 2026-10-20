@@ -11,6 +11,8 @@ services:
       - USE_MILVUS=true
       - MILVUS_LITE_PATH=/app/data/milvus.db
       - MILVUS_COLLECTION=product_embeddings
+      - CLIP_MODEL=${CLIP_MODEL:-ViT-B-32}
+      - CLIP_PRETRAINED=${CLIP_PRETRAINED:-openai}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]

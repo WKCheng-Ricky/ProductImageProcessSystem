@@ -21,12 +21,23 @@ RUN useradd --create-home --uid 1000 app
 
 COPY --from=builder /opt/venv /opt/venv
 
+ENV PATH="/opt/venv/bin:$PATH" \
+    CLIP_MODEL=ViT-B-32 \
+    CLIP_PRETRAINED=openai \
+    HF_HOME=/opt/models/huggingface \
+    U2NET_HOME=/opt/models/u2net
+
+# Weights are public, so the anonymous download needs no token. Done before COPY . . so code changes keep this layer.
+RUN python -c "import os, open_clip, rembg; open_clip.create_model_and_transforms(os.environ['CLIP_MODEL'], pretrained=os.environ['CLIP_PRETRAINED']); rembg.new_session('u2net', providers=['CPUExecutionProvider'])" && \
+    chmod -R a+rX /opt/models
+
+ENV HF_HUB_OFFLINE=1
+
 WORKDIR /app
 COPY --chown=app:app . .
 RUN mkdir -p data uploads resource && chown -R app:app data uploads resource
 
-ENV PATH="/opt/venv/bin:$PATH" \
-    PYTHONPATH=/app \
+ENV PYTHONPATH=/app \
     PYTHONUNBUFFERED=1 \
     MILVUS_LITE_PATH=/app/data/milvus.db \
     MILVUS_COLLECTION=product_embeddings

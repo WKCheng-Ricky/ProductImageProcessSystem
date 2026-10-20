@@ -57,7 +57,7 @@ def preload_models():
     cache = get_model_cache()
 
     # Get CLIP model configuration from environment
-    clip_model = os.getenv('CLIP_MODEL', 'ViT-L-14')
+    clip_model = os.getenv('CLIP_MODEL', 'ViT-B-32')
     clip_pretrained = os.getenv('CLIP_PRETRAINED', 'openai')
 
     logger.info(f"CLIP_MODEL={clip_model}, CLIP_PRETRAINED={clip_pretrained}")

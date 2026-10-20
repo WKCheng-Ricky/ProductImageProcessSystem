@@ -22,11 +22,10 @@ Findings from exploration that change the plan's assumptions:
 | 4. Dockerfile and compose | Done, verified with rootless nerdctl | `e09a7e2`, `533d001` | Build OK, `/health` and `/ready` return 200, runs as `uid=1000(app)`, healthcheck command exits 0. Bind mounts failed with `PermissionError` (root-owned in rootless), so `data` and `uploads` are now named volumes. nerdctl does not report a "healthy" status, so that check was done by running the command by hand. |
 | 5. Pinning and `pyproject.toml` | Done | `e85da78`, `46fa102` | `requirements.lock` generated with `uv pip compile`; Docker installs from it. The build with numpy 2.5.4 and torch 2.5.1 works. `requirements.txt` stays the human-edited input (no `requirements.in`). CI still installs a light dependency list rather than the lock. |
 | 6. README rewrite | Done | `416ec23` | CLAUDE.md, README and plan docs now say 70% as the lower similarity band. The CI badge points at `WKCheng-Ricky/ProductImageProcessSystem`. |
-| 7. Faster deployment | Planned | | ViT-B-32 default, weights baked into the image. See step 7. |
+| 7. Faster deployment | Done | see git log | ViT-B-32 default, CLIP and U2Net weights baked into the image, `HF_HUB_OFFLINE=1`. Verified with nerdctl: build OK, started with `--network none`, `/health` and `/ready` 200, uid 1000, log shows `ViT-B-32, dimension=512`, no Hugging Face warning. Image is 3.39 GB. `pytest -m model` not yet run (needs torch). |
 
 **Remaining from this plan**
 - Run `pytest -m model` once against real weights (written in `tests/test_model_smoke.py`, manual-only `model-smoke` job, but never run with real torch).
-- Step 7 (faster deployment), planned below.
 - Fake-encoder contract tests, including the model-mismatch guard in `milvus_db.py`.
 - Push the branch (needs your permission) so CI runs for the first time, then check both jobs.
 - Optional: install CI from `requirements.lock`.

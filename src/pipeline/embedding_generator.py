@@ -83,7 +83,7 @@ class EmbeddingGenerator:
                     model_name = f"{env_model}:{env_pretrained}"
             else:
                 # Fallback to default
-                model_name = 'clip-vit-large'
+                model_name = 'clip-vit-base'
 
         self.model_name = model_name
         self.normalize = normalize

@@ -24,7 +24,7 @@ class MilvusVectorLiteDB(VectorDatabase):
         self,
         collection_name: str = "product_embeddings",
         db_path: str = "./data/milvus.db",
-        dimension: int = 768,
+        dimension: int = 512,
         model_name: str = None,
     ):
         self.collection_name = collection_name
