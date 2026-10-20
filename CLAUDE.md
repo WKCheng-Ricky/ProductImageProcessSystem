@@ -85,8 +85,8 @@ All ML operations are called via `src/web/services/pipeline_service.py` which ho
 | Similarity | Action |
 |------------|--------|
 | > 90% | Auto-match (same product) |
-| 80–90% | Similar product (variant/related) |
-| < 80% | Different product |
+| 70–90% | Similar product (variant/related) |
+| < 70% | Different product |
 
 ## Configuration
 
