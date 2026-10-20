@@ -12,4 +12,4 @@ extend-exclude = ["venv", "data", "uploads", "resource", "example"]
 [tool.ruff.lint]
 select = ["E", "F"]
 # Existing violations ignored so CI starts green; tighten one rule at a time.
-ignore = ["F841", "E501", "E741"]
+ignore = ["E501", "E741"]

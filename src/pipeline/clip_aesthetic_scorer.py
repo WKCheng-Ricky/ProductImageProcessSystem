@@ -344,18 +344,10 @@ class CLIPQualityScorer:
         final_score = 171.740104 * raw_score + 6.025378
         final_score = np.clip(final_score, 1.0, 10.0)
 
-        # Empirical ranges from test_clip_ranges.py                       
-        # clarity_pos: 0.15-0.21, clarity_neg: 0.12-0.21                  
-        # comp_pos: 0.16-0.20, comp_neg: 0.14-0.21                        
-        # defect_pos: 0.17-0.22, defect_neg: 0.16-0.21                    
-        RANGES = {                                                        
-            'clarity_pos': (0.15, 0.21),                                  
-            'clarity_neg': (0.12, 0.21),                                  
-            'comp_pos': (0.16, 0.20),                                     
-            'comp_neg': (0.14, 0.21),                                     
-            'defect_pos': (0.17, 0.22),                                   
-            'defect_neg': (0.16, 0.21),                                   
-        }                                                                 
+        # Empirical ranges from test_clip_ranges.py
+        # clarity_pos: 0.15-0.21, clarity_neg: 0.12-0.21
+        # comp_pos: 0.16-0.20, comp_neg: 0.14-0.21
+        # defect_pos: 0.17-0.22, defect_neg: 0.16-0.21
 
         # Empirical ranges for combined scores (pos - neg) from test_clip_ranges.py
         # clarity: min(pos) - max(neg) to max(pos) - min(neg) = -0.06 to 0.09

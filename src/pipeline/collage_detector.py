@@ -77,15 +77,6 @@ class CollageDetector:
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         height, width = gray.shape
 
-        # Calculate pixel intensity changes for rows and columns
-        row_diff = np.abs(np.diff(gray.astype(float), axis=0)).mean(axis=1)
-        col_diff = np.abs(np.diff(gray.astype(float), axis=1)).mean(axis=0)
-
-        # Smooth
-        kernel_size = 5
-        row_diff_smooth = np.convolve(row_diff, np.ones(kernel_size)/kernel_size, mode='same')
-        col_diff_smooth = np.convolve(col_diff, np.ones(kernel_size)/kernel_size, mode='same')
-
         # Find peaks (Low variance regions may be separator lines)
         # or Separator line edges
 
