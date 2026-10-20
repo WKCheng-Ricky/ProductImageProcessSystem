@@ -9,11 +9,9 @@ Created: 2026-01-07
 Project: Product Image Processing System
 """
 
-import json
 import logging
-import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -334,4 +332,3 @@ class ProductGrouper:
 
 # Re-export Milvus classes — import deferred to bottom to avoid circular dependency
 # (milvus_db.py imports SearchResult/VectorDatabase/ProductGroupUUID from this module)
-from .milvus_db import MilvusVectorLiteDB, ProductGroupManager, ProductGroupsDB  # noqa: E402

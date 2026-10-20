@@ -15,7 +15,7 @@ import uuid
 import time
 import gc
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 from ..models.schemas import BatchUploadResponse, BatchProcessResponse, BatchImageResult
 from ..services.session_manager import SessionManager

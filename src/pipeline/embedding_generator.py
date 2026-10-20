@@ -11,12 +11,10 @@ Project: Product Image Processing System
 """
 
 import logging
-import os
 from dataclasses import dataclass
-from typing import List, Optional, Union
+from typing import List, Union
 
 import numpy as np
-import open_clip
 import torch
 from PIL import Image
 

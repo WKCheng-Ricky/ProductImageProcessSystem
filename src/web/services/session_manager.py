@@ -15,7 +15,7 @@ import uuid
 import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, Optional, Any
+from typing import Dict, Any
 import logging
 
 logger = logging.getLogger(__name__)

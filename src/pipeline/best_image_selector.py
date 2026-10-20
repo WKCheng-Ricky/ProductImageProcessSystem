@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import logging
 
 from .quality_scorer import ImageQualityScorer, QualityScore
-from .image_preprocessor import ImagePreprocessor, PreprocessingResult
+from .image_preprocessor import ImagePreprocessor
 
 logger = logging.getLogger(__name__)
 

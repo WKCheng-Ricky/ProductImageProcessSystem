@@ -26,7 +26,6 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from .collage_detector import CollageInfo
 from .config import DEFAULT_TARGET_SIZE, PIPELINE_SIMILARITY_THRESHOLD
 from .product_image_pipeline import ProductImagePipeline
 

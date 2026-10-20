@@ -9,7 +9,6 @@ Project: Product Image Processing System
 
 from fastapi import APIRouter, HTTPException
 import logging
-from typing import List, Optional, Dict, Any
 
 from ..models.schemas import (
     GroupMemberItem,

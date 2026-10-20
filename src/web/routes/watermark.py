@@ -8,7 +8,6 @@ Project: Product Image Processing System
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Request
-from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from PIL import Image
 import logging

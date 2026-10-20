@@ -5,12 +5,9 @@ Scores images on a 1-10 scale based on quality indicators
 """
 
 import logging
-import os
-from pathlib import Path
 
 import cv2
 import numpy as np
-import open_clip
 import torch
 from PIL import Image
 
