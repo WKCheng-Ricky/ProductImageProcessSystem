@@ -196,21 +196,17 @@ def process_batch(
             duplicate_of = None
             duplicate_score = None
 
-            try:
-                existing_results = pipeline.vector_db.search(
-                    embedding=embedding_result.embedding,
-                    top_k=1,
-                    threshold=DUPLICATE_THRESHOLD
-                )
+            existing_results = pipeline.vector_db.search(
+                embedding=embedding_result.embedding,
+                top_k=1,
+                threshold=DUPLICATE_THRESHOLD
+            )
 
-
-                if existing_results and existing_results[0].score >= DUPLICATE_THRESHOLD:
-                    is_duplicate = True
-                    duplicate_of = existing_results[0].id
-                    duplicate_score = existing_results[0].score
-                    logger.info(f"Duplicate detected for {filename}: {duplicate_score:.4f} match with {duplicate_of}")
-            except Exception as e:
-                logger.warning(f"Failed to check for duplicates: {e}")
+            if existing_results and existing_results[0].score >= DUPLICATE_THRESHOLD:
+                is_duplicate = True
+                duplicate_of = existing_results[0].id
+                duplicate_score = existing_results[0].score
+                logger.info(f"Duplicate detected for {filename}: {duplicate_score:.4f} match with {duplicate_of}")
 
             result.is_duplicate = is_duplicate
             result.duplicate_of = duplicate_of
