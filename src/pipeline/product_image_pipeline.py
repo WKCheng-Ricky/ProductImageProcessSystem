@@ -140,6 +140,63 @@ class ProductImagePipeline:
             )
         return self._product_grouper
 
+    @staticmethod
+    def _load_rgb_image(image_path: str) -> Image.Image:
+        img = Image.open(image_path)
+        return img if img.mode == 'RGB' else img.convert('RGB')
+
+    def _remove_watermark(self, img: Image.Image) -> Image.Image:
+        """Runs before collage detection so watermarks do not look like cell borders."""
+        watermark_result = self.watermark_remover.remove_watermark(img)
+        if watermark_result.watermarks_removed > 0:
+            logger.info(f"Removed {watermark_result.watermarks_removed} watermarks before collage detection")
+            return watermark_result.image
+        logger.info("No watermarks detected")
+        return img
+
+    def _detect_and_split_collage(self, img: Image.Image):
+        collage_info = self.collage_detector.is_collage(img)
+        logger.info(f"Collage detection: is_collage={collage_info.is_collage}, num={collage_info.num_images}")
+        if not collage_info.is_collage:
+            return collage_info, [img]
+        return collage_info, self.collage_detector.smart_split(img, collage_info).images
+
+    def _clean_and_select_best(self, images: List[Image.Image]) -> Image.Image:
+        if len(images) == 1:
+            return self.preprocessor.standardize(images[0]).image
+        best_idx, processed_img, _ = self.image_selector.select_best(images, return_all_scores=False)
+        logger.info(f"Selected best image: index {best_idx}")
+        return processed_img
+
+    def _score_quality(self, processed_img: Image.Image):
+        quality = self.quality_scorer.score(processed_img)
+        logger.info(f"Quality score: {quality.overall:.3f}")
+        if quality.overall < self.quality_threshold:
+            logger.warning(f"Image quality below threshold: {quality.overall:.3f}")
+        return quality
+
+    def _save_processed_image(self, processed_img: Image.Image, image_path: str) -> str:
+        os.makedirs(self.output_dir, exist_ok=True)
+        processed_image_path = os.path.join(self.output_dir, Path(image_path).stem + "_processed.jpg")
+        processed_img.save(processed_image_path, quality=95)
+        logger.info(f"Saved processed image: {processed_image_path}")
+        return processed_image_path
+
+    def _find_similar(self, embedding: np.ndarray) -> List[Dict[str, Any]]:
+        if self.vector_db.size() == 0:
+            return []
+        similar = self.product_grouper.find_similar_products(embedding, top_k=10)
+        logger.info(f"Found {len(similar)} similar products")
+        return [{"id": r.id, "score": r.score} for r in similar]
+
+    def _store_embedding(self, id: str, embedding: np.ndarray, image_path: str, quality_score: float) -> None:
+        self.vector_db.insert(
+            id=id,
+            embedding=embedding,
+            metadata={"image_path": image_path, "quality_score": quality_score},
+        )
+        logger.info(f"Inserted ID {id} into database")
+
     def process_image(
         self,
         image_path: str,
@@ -162,87 +219,23 @@ class ProductImagePipeline:
         try:
             logger.info(f"Processing image: {image_path}")
 
-            # Load image
-            img = Image.open(image_path)
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
+            img = self._load_rgb_image(image_path)
+            img = self._remove_watermark(img)
+            collage_info, images_to_process = self._detect_and_split_collage(img)
+            processed_img = self._clean_and_select_best(images_to_process)
+            quality = self._score_quality(processed_img)
 
-            # Step 0: Remove watermark (before collage detection)
-            watermark_result = self.watermark_remover.remove_watermark(img)
-            if watermark_result.watermarks_removed > 0:
-                logger.info(f"Removed {watermark_result.watermarks_removed} watermarks before collage detection")
-                img = watermark_result.image  # Use watermark-removed image
-            else:
-                logger.info("No watermarks detected")
-
-            # Step 1: Detect collage
-            collage_info = self.collage_detector.is_collage(img)
-            logger.info(f"Collage detection: is_collage={collage_info.is_collage}, num={collage_info.num_images}")
-
-            # Step 2: Split collage (if it's a collage)
-            if collage_info.is_collage:
-                split_result = self.collage_detector.smart_split(img, collage_info)
-                images_to_process = split_result.images
-            else:
-                images_to_process = [img]
-
-            # Step 3: Clean and score each image, select the best
-            if len(images_to_process) > 1:
-                best_idx, processed_img, _ = self.image_selector.select_best(
-                    images_to_process,
-                    return_all_scores=False,
-                )
-                logger.info(f"Selected best image: index {best_idx}")
-            else:
-                # Only one image, process directly
-                preprocess_result = self.preprocessor.standardize(images_to_process[0])
-                processed_img = preprocess_result.image
-
-            # Step 4: Quality scoring
-            quality = self.quality_scorer.score(processed_img)
-            logger.info(f"Quality score: {quality.overall:.3f}")
-
-            if quality.overall < self.quality_threshold:
-                logger.warning(f"Image quality below threshold: {quality.overall:.3f}")
-
-            # Step 5: Save processed image
             processed_image_path = None
             if save_processed and self.output_dir:
-                os.makedirs(self.output_dir, exist_ok=True)
-                filename = Path(image_path).stem + "_processed.jpg"
-                processed_image_path = os.path.join(self.output_dir, filename)
-                processed_img.save(processed_image_path, quality=95)
-                logger.info(f"Saved processed image: {processed_image_path}")
+                processed_image_path = self._save_processed_image(processed_img, image_path)
 
-            # Step 6: Generate Embedding
-            embedding_result = self.embedding_generator.generate(processed_img)
-            embedding = embedding_result.embedding
+            embedding = self.embedding_generator.generate(processed_img).embedding
             logger.info(f"Generated embedding: dim={len(embedding)}")
 
-            # Step 7: Search for similar products
-            similar_products = []
-            if search_similar and self.vector_db.size() > 0:
-                similar = self.product_grouper.find_similar_products(
-                    embedding,
-                    top_k=10,
-                )
-                similar_products = [
-                    {"id": r.id, "score": r.score}
-                    for r in similar
-                ]
-                logger.info(f"Found {len(similar_products)} similar products")
+            similar_products = self._find_similar(embedding) if search_similar else []
 
-            # Step 8: Insert into database (if ID provided)
             if id:
-                self.vector_db.insert(
-                    id=id,
-                    embedding=embedding,
-                    metadata={
-                        "image_path": image_path,
-                        "quality_score": quality.overall,
-                    }
-                )
-                logger.info(f"Inserted ID {id} into database")
+                self._store_embedding(id, embedding, image_path, quality.overall)
 
             return ProcessingResult(
                 success=True,
