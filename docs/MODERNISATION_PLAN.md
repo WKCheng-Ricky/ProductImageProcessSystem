@@ -92,12 +92,17 @@ Decisions:
 - **Bake weights into the image.** A build-stage `RUN` downloads the CLIP and U2Net weights into a fixed cache directory, the runtime stage copies it, and `HF_HUB_OFFLINE=1` stops runtime network calls. This also removes the Hugging Face "unauthenticated requests" warning without using any token.
 - **No personal tokens, ever.** The repo is public: no `HF_TOKEN` in the Dockerfile, compose file, CI or `.env` committed to git. Anonymous downloads of public models are enough.
 
-## Tier 2: moderate, only with agreement (about 2 to 3 days)
+## Refactor tier: code-quality follow-up (between Tier 1 and Tier 2)
+
+Tier 1 is done. A review of the result rated the code quality mixed: path traversal risk in session IDs, blocking calls inside async routes, about 40 blanket `except Exception` blocks, scattered configuration, module-level `torch` imports and thin test coverage outside the basics. The ten small steps, in three groups (P0 safety, P1 configuration and lint, P2 testability), are in `docs/REFACTOR_PLAN.md`, one commit each, with no restructuring of `src/`.
+
+Do this before Tier 2. The typed-settings item below builds on step 4 of the refactor plan, and the evaluation script (item 9) is more trustworthy once the pipeline has tests.
+
 
 7. **`docs/SPEC_DRIVEN_WORKFLOW.md`.** Document the real method: how `CLAUDE.md` steers the agent, how tasks were prompted (task, constraints, iteration), what the tests catch, and what was corrected by hand. Needs the owner's real details and the honest "almost entirely" share; nothing is invented. If details are not supplied it stays a template.
 8. **`docs/PROMPTS.md`.** Representative original prompts, only if they were kept or can be honestly reconstructed and labelled as such.
 9. **Small evaluation script.** Measure the 90% and 70% similarity thresholds on a few labelled sample pairs and report precision and recall.
-10. **Typed settings.** Replace scattered `os.getenv` calls with a `pydantic-settings` class in `src/pipeline/config.py`.
+10. **Typed settings.** Replace scattered `os.getenv` calls with a `pydantic-settings` class in `src/pipeline/config.py`. (Refactor step 4 first centralises the values as plain constants; this item upgrades that to typed settings.)
 11. **Optional real RAG feature.** Retrieve the top-k similar products from the vector DB, pass them and the cleaned image to the Claude API, and generate a product listing or a duplicate explanation. Behind a flag, with a mocked test. Only after this exists may the README say "RAG".
 
 ## Tier 3: deliberately not doing
