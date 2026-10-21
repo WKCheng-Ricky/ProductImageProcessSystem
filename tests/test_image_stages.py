@@ -3,7 +3,6 @@ import io
 
 import pytest
 from fastapi.testclient import TestClient
-from PIL import Image
 
 from src.pipeline.collage_detector import CollageDetector
 from src.pipeline.image_preprocessor import ImagePreprocessor
@@ -11,17 +10,7 @@ from src.pipeline.watermark_remover import WatermarkRemover
 from src.web.app import app
 from src.web.routes import upload
 from src.web.services.session_manager import SessionManager
-from tests.fakes import product_photo
-
-CELL_COLORS = [(200, 30, 30), (30, 40, 200), (30, 200, 40), (200, 200, 30)]
-
-
-def two_by_two_collage() -> Image.Image:
-    grid = Image.new("RGB", (606, 606), "white")
-    for index, color in enumerate(CELL_COLORS):
-        grid.paste(product_photo(color, (300, 300)), ((index % 2) * 303, (index // 2) * 303))
-    return grid
-
+from tests.fakes import product_photo, two_by_two_collage
 
 def test_single_product_photo_is_not_a_collage():
     assert CollageDetector().is_collage(product_photo()).is_collage is False
