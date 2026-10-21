@@ -98,6 +98,20 @@ Tier 1 is done. A review of the result rated the code quality mixed: path traver
 
 Do this before Tier 2. The typed-settings item below builds on step 4 of the refactor plan, and the evaluation script (item 9) is more trustworthy once the pipeline has tests.
 
+### Test coverage (part of the refactor tier)
+
+No coverage has been measured yet, and `pytest-cov` is not in the dev requirements. The refactor tier is not done until coverage is measured, reported and at least **80% line coverage** of `src/` in the fast suite.
+
+Steps, one commit each:
+1. **Measure the baseline.** Add `pytest-cov` to `requirements-dev.txt` and a `[tool.coverage]` section to `pyproject.toml` (`source = ["src"]`, branch coverage on). Run `pytest --cov=src --cov-report=term-missing` and record the per-file numbers in `docs/REFACTOR_PLAN.md`.
+2. **Close the gaps.** Add fast tests, with no weights, for the lowest-covered modules that hold our own logic: the web routes (error paths and 404/400 cases), `session_manager.py`, `product_grouper.py`, `milvus_db.py` (via the fake client) and the image stages. Test behaviour, not lines: no assertion-free tests written only to raise the number.
+3. **Gate it in CI.** Run `pytest --cov=src --cov-fail-under=80` in the `test` job, so a PR that drops coverage below 80% fails.
+
+Scope rules, stated so the number stays honest:
+- The 80% is measured on the fast suite only. The CI `test` job has no torch or rembg, so code that only runs with real weights (`embedding_generator.py`, `clip_aesthetic_scorer.py`, the loading parts of `model_cache.py` and `clip_loader.py`) is covered by the opt-in `-m model` tests and is reported separately.
+- If those files must be excluded from the gate to reach 80%, list them in `[tool.coverage.report] omit` with a one-line reason each in the plan. Do not exclude anything else, and do not use blanket `# pragma: no cover`.
+- Report both numbers: the gated fast-suite figure, and the overall figure when `-m model` is run locally with real weights.
+
 
 7. **`docs/SPEC_DRIVEN_WORKFLOW.md`.** Document the real method: how `CLAUDE.md` steers the agent, how tasks were prompted (task, constraints, iteration), what the tests catch, and what was corrected by hand. Needs the owner's real details and the honest "almost entirely" share; nothing is invented. If details are not supplied it stays a template.
 8. **`docs/PROMPTS.md`.** Representative original prompts, only if they were kept or can be honestly reconstructed and labelled as such.
