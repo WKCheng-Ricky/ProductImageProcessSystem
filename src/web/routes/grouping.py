@@ -119,7 +119,7 @@ def run_grouping(
         )
 
     except Exception as e:
-        logger.error(f"Error running grouping: {e}")
+        logger.error(f"Error running grouping: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error running grouping")
 
 
@@ -177,7 +177,7 @@ def get_grouping_results():
         )
 
     except Exception as e:
-        logger.error(f"Error getting grouping results: {e}")
+        logger.error(f"Error getting grouping results: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error getting results")
 
 
@@ -223,7 +223,7 @@ def get_grouping_stats():
         )
 
     except Exception as e:
-        logger.error(f"Error getting grouping stats: {e}")
+        logger.error(f"Error getting grouping stats: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error getting stats")
 
 
@@ -271,5 +271,5 @@ def get_group_by_id(group_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting group {group_id}: {e}")
+        logger.error(f"Error getting group {group_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error getting group")

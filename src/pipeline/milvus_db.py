@@ -284,6 +284,10 @@ class MilvusVectorLiteDB(VectorDatabase):
         return all_ids, np.array(all_vectors)
 
 
+# Milvus requires every collection to have a vector field; groups are looked up by id only.
+_PLACEHOLDER_VECTOR_DIM = 2
+
+
 class ProductGroupsDB:
     """
     Database for storing product groups using Milvus Lite
@@ -317,16 +321,23 @@ class ProductGroupsDB:
         else:
             logger.info(f"Using existing groups collection: {self.collection_name}")
 
+        self._client.load_collection(self.collection_name)
+
     def _create_collection(self):
         schema = self._client.create_schema(auto_id=False, enable_dynamic_field=False)
         schema.add_field(field_name="group_id", datatype=DataType.VARCHAR, max_length=50, is_primary=True)
         schema.add_field(field_name="member_ids_json", datatype=DataType.VARCHAR, max_length=65535)
         schema.add_field(field_name="representative_id", datatype=DataType.VARCHAR, max_length=100)
         schema.add_field(field_name="created_at", datatype=DataType.VARCHAR, max_length=30)
+        schema.add_field(field_name="placeholder_vector", datatype=DataType.FLOAT_VECTOR, dim=_PLACEHOLDER_VECTOR_DIM)
+
+        index_params = self._client.prepare_index_params()
+        index_params.add_index(field_name="placeholder_vector", metric_type="IP", index_type="FLAT")
 
         self._client.create_collection(
             collection_name=self.collection_name,
             schema=schema,
+            index_params=index_params,
         )
         logger.info(f"Created groups collection: {self.collection_name}")
 
@@ -341,6 +352,7 @@ class ProductGroupsDB:
             "member_ids_json": json.dumps(group.member_ids),
             "representative_id": group.representative_id or "",
             "created_at": group.created_at,
+            "placeholder_vector": [0.0] * _PLACEHOLDER_VECTOR_DIM,
         }
         self._client.insert(collection_name=self.collection_name, data=[data])
         logger.info(f"Inserted group {group.group_id} with {group.size} members")
@@ -425,6 +437,7 @@ class ProductGroupsDB:
         self._connect()
         self._client.drop_collection(collection_name=self.collection_name)
         self._create_collection()
+        self._client.load_collection(self.collection_name)
         logger.info("Cleared all groups")
 
 

@@ -10,14 +10,32 @@ import os
 import shutil
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
 from src.pipeline.config import CONFIG
 from src.pipeline.milvus_db import MilvusVectorLiteDB
 
+from .pipeline_service import get_pipeline
+
 logger = logging.getLogger(__name__)
+
+
+def _path_size_bytes(path: str) -> int:
+    if os.path.isfile(path):
+        return os.path.getsize(path)
+    return sum(
+        os.path.getsize(os.path.join(root, name))
+        for root, _, names in os.walk(path)
+        for name in names
+    )
+
+
+def active_milvus_db() -> Optional[MilvusVectorLiteDB]:
+    """The pipeline's own Milvus handle, so dimension and model checks match and the file is not opened twice."""
+    vector_db = get_pipeline().vector_db
+    return vector_db if isinstance(vector_db, MilvusVectorLiteDB) else None
 
 
 def backup_database() -> str:
@@ -35,7 +53,10 @@ def backup_database() -> str:
     timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
     backup_path = db_path.replace(".db", f"_{timestamp}.bak")
 
-    shutil.copy2(db_path, backup_path)
+    if os.path.isdir(db_path):
+        shutil.copytree(db_path, backup_path)
+    else:
+        shutil.copy2(db_path, backup_path)
     logger.info(f"Database backed up to: {backup_path}")
 
     return backup_path
@@ -54,13 +75,9 @@ def duplicate_records(n: int) -> Dict[str, Any]:
     if n < 2:
         raise ValueError("n must be at least 2 (original + 1 copy)")
 
-    db_path = CONFIG.get("milvus_lite_path", "./data/milvus.db")
-    collection_name = CONFIG.get("milvus_collection", "product_embeddings")
-
-    vector_db = MilvusVectorLiteDB(
-        collection_name=collection_name,
-        db_path=db_path,
-    )
+    vector_db = active_milvus_db()
+    if vector_db is None:
+        raise ValueError("Duplicating records needs the Milvus vector database (set USE_MILVUS=true)")
 
     original_size = vector_db.size()
     if original_size == 0:
@@ -117,6 +134,11 @@ def backup_and_duplicate(n: int) -> Dict[str, Any]:
     Returns:
         Dictionary with backup path and duplication results
     """
+    if n < 2:
+        raise ValueError("n must be at least 2 (original + 1 copy)")
+    if active_milvus_db() is None:
+        raise ValueError("Duplicating records needs the Milvus vector database (set USE_MILVUS=true)")
+
     backup_path = backup_database()
 
     result = duplicate_records(n)
@@ -130,17 +152,13 @@ def get_database_stats() -> Dict[str, Any]:
     db_path = CONFIG.get("milvus_lite_path", "./data/milvus.db")
     collection_name = CONFIG.get("milvus_collection", "product_embeddings")
 
-    if not os.path.exists(db_path):
+    vector_db = active_milvus_db()
+    if vector_db is None or not os.path.exists(db_path):
         return {
             "exists": False,
             "record_count": 0,
             "db_path": db_path,
         }
-
-    vector_db = MilvusVectorLiteDB(
-        collection_name=collection_name,
-        db_path=db_path,
-    )
 
     return {
         "exists": True,
@@ -165,7 +183,7 @@ def list_backups() -> List[Dict[str, Any]]:
                 backups.append({
                     "filename": file,
                     "path": file_path,
-                    "size_mb": round(stat.st_size / (1024 * 1024), 2),
+                    "size_mb": round(_path_size_bytes(file_path) / (1024 * 1024), 2),
                     "created_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
                 })
 

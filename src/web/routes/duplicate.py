@@ -39,7 +39,7 @@ def get_stats():
         stats = get_database_stats()
         return stats
     except Exception as e:
-        logger.error(f"Error getting database stats: {e}")
+        logger.error(f"Error getting database stats: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -50,7 +50,7 @@ def get_backups():
         backups = list_backups()
         return {"backups": backups}
     except Exception as e:
-        logger.error(f"Error listing backups: {e}")
+        logger.error(f"Error listing backups: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -71,5 +71,5 @@ def duplicate_database(request: DuplicateRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Error during duplication: {e}")
+        logger.error(f"Error during duplication: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
