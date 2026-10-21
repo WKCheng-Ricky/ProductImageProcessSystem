@@ -60,15 +60,6 @@ def test_when_every_image_fails_the_threshold_the_first_is_returned():
     assert index == 0 and candidates is None
 
 
-def test_rank_images_orders_by_score(selector):
-    sharp = product_photo()
-
-    ranked = selector.rank_images([blurry(sharp), sharp])
-
-    assert [c.index for c in ranked][0] == 1
-    assert [c.final_score for c in ranked] == sorted((c.final_score for c in ranked), reverse=True)
-
-
 def test_evaluate_image_reports_processed_image_and_score(selector):
     processed, score, _ = selector.evaluate_image(product_photo())
 

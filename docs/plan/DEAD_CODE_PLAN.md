@@ -1,6 +1,6 @@
 # Dead-code review plan
 
-Status: proposed. Only `pipeline_preloader.py` is approved for deletion. Nothing below has been removed yet.
+Status: `pipeline_preloader.py` and the candidates below are deleted. The web UI was checked by hand afterwards with no errors. A second `vulture` pass lists follow-ups at the end.
 
 ## How it was found
 
@@ -8,18 +8,18 @@ Status: proposed. Only `pipeline_preloader.py` is approved for deletion. Nothing
 
 Static analysis cannot see callers outside the repo (scripts, notebooks, other services), so "no caller" means no caller in this repo.
 
-## Approved
+## Done
 
-- Delete `src/pipeline/pipeline_preloader.py`. Nothing imports it. `main.preload_models` (used by `--preload-model`, the Dockerfile and `scripts/start.sh`) does the same job. Fix the line in `docs/REFACTOR_PLAN.md` that says it keeps its script entry point.
+- Deleted `src/pipeline/pipeline_preloader.py`. Nothing imported it. `main.preload_models` (used by `--preload-model`, the Dockerfile and `scripts/start.sh`) does the same job.
 
-## Not decided: candidates with no caller in the repo
+## Removed
 
-Do not delete these without a decision per group. A recent bug (see below) shows that Milvus-backed grouping code can be live behind the web UI while static analysis calls it unused, so each group needs a real check first.
+Trial: each candidate was deleted on its own in a throwaway worktree. All 32 still compiled and imported. The only failing tests were ones written to cover the candidates, and five deletions left unused imports (`ruff --fix` removed them). All were then removed together, with those tests.
 
-| File | Candidates |
+| File | Removed |
 |---|---|
-| `product_grouper.py` | `Group.remove_member`, `Group.from_dict`, `insert_batch`, `group_skus_connected_components`, `merge_groups`, `delete_all` (two copies) |
-| `milvus_db.py` | `delete_all`, `delete_group`, `expand_group`, `get_group_for_product`, `get_group_statistics` |
+| `product_grouper.py` | `ProductGroupUUID.remove_member`, `ProductGroupUUID.from_dict`, `InMemoryVectorDB.insert_batch`, `ProductGrouper.group_skus_connected_components`, `ProductGrouper.merge_groups` |
+| `milvus_db.py` | `ProductGroupsDB.delete_group`, `ProductGroupManager.expand_group`, `get_group_for_product`, `get_group_statistics` |
 | `product_image_pipeline.py` | `group_products`, `select_best_from_sku` |
 | `quality_scorer.py` | `score_basic`, `score_aesthetic`, `filter_acceptable`, properties `basic_score`, `aesthetic_score_detail` |
 | `basic_quality_scorer.py` | `filter_acceptable` |
@@ -28,10 +28,14 @@ Do not delete these without a decision per group. A recent bug (see below) shows
 | `clip_aesthetic_scorer.py` | `score_image` |
 | `aesthetic_scorer.py` | `score_simple` |
 | `watermark_remover.py` | `remove_watermark_auto` |
-| `schemas.py` | `SessionStatusResponse`, `ErrorResponse` (never imported; `/session/{id}/status` returns a plain dict) |
-| `collage_detector.py`, `image_preprocessor.py` | attributes `line_threshold`, `_inpainting_model`, `_ocr_model` (set, never read) |
+| `schemas.py` | `SessionStatusResponse`, `ErrorResponse` |
+| `collage_detector.py`, `image_preprocessor.py` | attributes `line_threshold`, `_inpainting_model`, `_ocr_model` |
 
-Not candidates: route handlers, pydantic fields and properties, and `delete_all` on the vector DB while a test uses it.
+Kept on purpose: `delete_all` on the vector DB classes (interface parity, used by a test), route handlers, pydantic fields and properties.
+
+## Follow-ups from the second vulture pass
+
+Exposed by the removals, not yet checked or removed: `clustering.connected_components_cluster`, `ProductGroupsDB.update_group` and `find_group_by_product`, `ProductGrouper.group_skus_clustering`, `EmbeddingGenerator.similarity`, the `is_acceptable` methods on the score classes, and the unused `line_detection_threshold` parameter in `collage_detector.py`.
 
 ## Method for each group
 

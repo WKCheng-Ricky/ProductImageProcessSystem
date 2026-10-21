@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Tuple, Dict, Any
-from datetime import datetime
 
 
 class CollageInfoResponse(BaseModel):
@@ -129,24 +128,6 @@ class SearchResultsResponse(BaseModel):
     results: List[SearchResultItem]
     total_count: int
     query_image_url: str
-
-
-class SessionStatusResponse(BaseModel):
-    """Session status information"""
-    session_id: str
-    current_step: int
-    created_at: datetime
-    updated_at: datetime
-    steps_completed: List[str] = []
-    watermark_skipped: bool = False
-    collage_skipped: bool = False
-
-
-class ErrorResponse(BaseModel):
-    """Error response"""
-    error: str
-    detail: Optional[str] = None
-    session_id: Optional[str] = None
 
 
 class BatchImageResult(BaseModel):

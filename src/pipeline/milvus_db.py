@@ -4,7 +4,7 @@ import os
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -384,14 +384,6 @@ class ProductGroupsDB:
         self.insert_group(group)
         logger.info(f"Updated group {group.group_id}")
 
-    def delete_group(self, group_id: str):
-        self._connect()
-        self._client.delete(
-            collection_name=self.collection_name,
-            filter=f'group_id == "{group_id}"',
-        )
-        logger.info(f"Deleted group {group_id}")
-
     def get_all_groups(self) -> List[ProductGroupUUID]:
         self._connect()
         groups = []
@@ -534,70 +526,9 @@ class ProductGroupManager:
         logger.info(f"Grouping complete: {len(created_groups)} groups created")
         return created_groups
 
-    def expand_group(self, group_id: str) -> Optional[ProductGroupUUID]:
-        group = self.groups_db.get_group(group_id)
-        if group is None:
-            logger.warning(f"Group {group_id} not found")
-            return None
-
-        if not group.representative_id:
-            logger.warning(f"Group {group_id} has no representative")
-            return group
-
-        rep_data = self.vector_db.get(group.representative_id)
-        if rep_data is None:
-            logger.warning(f"Representative {group.representative_id} not found in vector DB")
-            return group
-
-        similar_results = self.vector_db.search(
-            embedding=rep_data.embedding,
-            top_k=self.top_k * 2,
-            threshold=self.similarity_threshold,
-        )
-
-        new_members_added = 0
-        for result in similar_results:
-            if result.id not in group.member_ids:
-                existing_group = self.groups_db.find_group_by_product(result.id)
-                if existing_group is None:
-                    group.add_member(result.id)
-                    new_members_added += 1
-
-        if new_members_added > 0:
-            self.groups_db.update_group(group)
-            logger.info(f"Expanded group {group_id[:8]}... with {new_members_added} new members")
-
-        return group
-
     def get_group(self, group_id: str) -> Optional[ProductGroupUUID]:
         return self.groups_db.get_group(group_id)
 
     def get_all_groups(self) -> List[ProductGroupUUID]:
         return self.groups_db.get_all_groups()
 
-    def get_group_for_product(self, product_id: str) -> Optional[ProductGroupUUID]:
-        return self.groups_db.find_group_by_product(product_id)
-
-    def get_group_statistics(self) -> Dict[str, Any]:
-        groups = self.get_all_groups()
-        if not groups:
-            return {
-                "total_groups": 0,
-                "total_products_grouped": 0,
-                "avg_group_size": 0,
-                "max_group_size": 0,
-                "min_group_size": 0,
-                "groups_with_multiple_members": 0,
-            }
-
-        sizes = [g.size for g in groups]
-        multi_member_groups = [g for g in groups if g.size > 1]
-
-        return {
-            "total_groups": len(groups),
-            "total_products_grouped": sum(sizes),
-            "avg_group_size": sum(sizes) / len(sizes),
-            "max_group_size": max(sizes),
-            "min_group_size": min(sizes),
-            "groups_with_multiple_members": len(multi_member_groups),
-        }

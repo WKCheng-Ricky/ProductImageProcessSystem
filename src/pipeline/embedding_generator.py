@@ -237,19 +237,6 @@ class EmbeddingGenerator:
 
         return results
 
-    def generate_from_path(self, image_path: str) -> EmbeddingResult:
-        """
-        Generate embedding from file path
-
-        Args:
-            image_path: Image file path
-
-        Returns:
-            EmbeddingResult
-        """
-        img = Image.open(image_path)
-        return self.generate(img)
-
     def similarity(
         self,
         embedding1: Union[np.ndarray, EmbeddingResult],
@@ -341,26 +328,6 @@ class TextImageEmbeddingGenerator(EmbeddingGenerator):
             dimension=len(embedding),
             normalized=self.normalize,
         )
-
-    def text_image_similarity(
-        self,
-        text: str,
-        img: Image.Image
-    ) -> float:
-        """
-        Calculate similarity between text and image
-
-        Args:
-            text: Input text
-            img: Input image
-
-        Returns:
-            Similarity score
-        """
-        text_emb = self.generate_text_embedding(text)
-        img_emb = self.generate(img)
-
-        return self.similarity(text_emb, img_emb)
 
     def search_by_text(
         self,

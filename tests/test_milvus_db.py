@@ -109,12 +109,9 @@ def test_update_group_replaces_members(groups_db):
     assert groups_db.size() == 1
 
 
-def test_delete_group_and_clear_all(groups_db):
+def test_clear_all_groups(groups_db):
     groups_db.insert_group(group("g1", ["a"]))
     groups_db.insert_group(group("g2", ["b"]))
-
-    groups_db.delete_group("g1")
-    assert [g.group_id for g in groups_db.get_all_groups()] == ["g2"]
 
     groups_db.clear_all_groups()
     assert groups_db.get_all_groups() == []
@@ -159,33 +156,3 @@ def test_grouping_an_empty_database_creates_nothing(vector_db, groups_db):
     assert manager.group_all_products() == []
 
 
-def test_group_statistics(vector_db, groups_db):
-    manager = seeded_manager(vector_db, groups_db)
-    manager.group_all_products()
-
-    stats = manager.get_group_statistics()
-
-    assert (stats["total_groups"], stats["max_group_size"], stats["min_group_size"]) == (2, 2, 1)
-    assert stats["groups_with_multiple_members"] == 1
-
-
-def test_group_statistics_when_there_are_no_groups(vector_db, groups_db):
-    stats = ProductGroupManager(vector_db=vector_db, groups_db=groups_db).get_group_statistics()
-
-    assert stats["total_groups"] == 0
-
-
-def test_expand_group_adds_newly_similar_ungrouped_products(vector_db, groups_db):
-    vector_db.insert("red", RED)
-    manager = ProductGroupManager(vector_db=vector_db, groups_db=groups_db, similarity_threshold=0.9)
-    groups_db.insert_group(group("g1", ["red"]))
-    vector_db.insert("near-red", NEAR_RED)
-
-    expanded = manager.expand_group("g1")
-
-    assert sorted(expanded.member_ids) == ["near-red", "red"]
-    assert manager.get_group_for_product("near-red").group_id == "g1"
-
-
-def test_expand_unknown_group_returns_none(vector_db, groups_db):
-    assert ProductGroupManager(vector_db=vector_db, groups_db=groups_db).expand_group("nope") is None

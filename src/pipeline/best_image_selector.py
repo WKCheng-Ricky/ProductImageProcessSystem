@@ -365,21 +365,4 @@ class BestImageSelector:
 
         return best.index, best.processed_image, None
 
-    def rank_images(
-        self,
-        images: List[Image.Image]
-    ) -> List[ImageCandidate]:
-        """
-        Rank all images
-
-        Args:
-            images: List of images
-
-        Returns:
-            List of candidates sorted by score descending
-        """
-        _, _, candidates = self.select_best(images, return_all_scores=True)
-        return candidates or []
-
-
 # Usage

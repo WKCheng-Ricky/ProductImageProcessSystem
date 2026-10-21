@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from src.pipeline.product_grouper import InMemoryVectorDB, ProductGroup, ProductGrouper, ProductGroupUUID
+from src.pipeline.product_grouper import InMemoryVectorDB, ProductGrouper, ProductGroupUUID
 
 RED = np.array([1.0, 0.0, 0.0])
 NEAR_RED = np.array([0.98, 0.1, 0.0])
@@ -54,34 +54,10 @@ def test_clustering_an_empty_database_returns_nothing():
     assert ProductGrouper(InMemoryVectorDB()).group_skus_clustering() == []
 
 
-def test_connected_components_groups_the_colour_families(db):
-    groups = ProductGrouper(db, similarity_threshold=0.9).group_skus_connected_components()
-
-    assert sorted(sorted(g.ids) for g in groups) == [["blue", "near-blue"], ["near-red", "red"]]
-
-
-def test_merge_groups_joins_groups_whose_representatives_match(db):
-    groups = [
-        ProductGroup(group_id=0, ids=["red"], representative_id="red", size=1),
-        ProductGroup(group_id=1, ids=["near-red"], representative_id="near-red", size=1),
-        ProductGroup(group_id=2, ids=["blue"], representative_id="blue", size=1),
-    ]
-
-    merged = ProductGrouper(db).merge_groups(groups, merge_threshold=0.9)
-
-    assert sorted(sorted(g.ids) for g in merged) == [["blue"], ["near-red", "red"]]
-
-
-def test_merge_groups_with_one_group_is_a_no_op(db):
-    only = [ProductGroup(group_id=0, ids=["red"], representative_id="red", size=1)]
-
-    assert ProductGrouper(db).merge_groups(only) is only
-
-
-def test_in_memory_insert_batch_delete_and_clear():
+def test_in_memory_delete_and_clear():
     db = InMemoryVectorDB()
-
-    db.insert_batch(["a", "b"], np.array([RED, BLUE]))
+    db.insert("a", RED)
+    db.insert("b", BLUE)
     assert db.size() == 2
 
     db.delete("a")
@@ -94,13 +70,11 @@ def test_in_memory_insert_batch_delete_and_clear():
     assert db.size() == 0
 
 
-def test_group_uuid_member_management_and_round_trip():
+def test_group_uuid_add_member_ignores_duplicates_and_serialises():
     group = ProductGroupUUID(group_id="g", member_ids=["a"], representative_id="a")
 
     group.add_member("b")
     group.add_member("b")
-    group.remove_member("a")
-    restored = ProductGroupUUID.from_dict(group.to_dict())
 
-    assert group.member_ids == ["b"] and group.size == 1
-    assert (restored.group_id, restored.member_ids, restored.representative_id) == ("g", ["b"], "a")
+    assert group.member_ids == ["a", "b"] and group.size == 2
+    assert group.to_dict()["size"] == 2

@@ -59,8 +59,6 @@ class ImagePreprocessor:
 
         # Lazy load models
         self._rembg_session = None
-        self._inpainting_model = None
-        self._ocr_model = None
 
     @property
     def rembg_session(self):

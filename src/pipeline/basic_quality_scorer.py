@@ -286,28 +286,3 @@ class BasicQualityScorer:
             overall=overall,
         )
 
-    def filter_acceptable(
-        self,
-        images: list[Image.Image | np.ndarray],
-        min_score: float = 0.3
-    ) -> list[tuple[int, BasicQualityScore]]:
-        """
-        Filter images that meet quality standards
-
-        Args:
-            images: Image list
-            min_score: Minimum score threshold
-
-        Returns:
-            List of (index, score) tuples, sorted by score descending
-        """
-        results = []
-
-        for i, img in enumerate(images):
-            score = self.score(img)
-            if score.is_acceptable(min_score):
-                results.append((i, score))
-
-        results.sort(key=lambda x: x[1].overall, reverse=True)
-
-        return results

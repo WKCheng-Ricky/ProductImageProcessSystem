@@ -13,7 +13,7 @@ from .config import CONFIG, DEFAULT_TARGET_SIZE, PIPELINE_SIMILARITY_THRESHOLD, 
 from .embedding_generator import EmbeddingGenerator, TextImageEmbeddingGenerator
 from .image_preprocessor import ImagePreprocessor
 # product_grouper must load before milvus_db (circular import)
-from .product_grouper import InMemoryVectorDB, ProductGroup, ProductGrouper, SearchResult, VectorDatabase
+from .product_grouper import InMemoryVectorDB, ProductGrouper, SearchResult, VectorDatabase
 from .milvus_db import MilvusVectorLiteDB
 from .quality_scorer import ImageQualityScorer
 from .watermark_remover import WatermarkRemover
@@ -363,33 +363,3 @@ class ProductImagePipeline:
 
         return results
 
-    def group_products(self) -> List[ProductGroup]:
-        """
-        Group all products in database
-
-        Returns:
-            List of ProductGroup
-        """
-        return self.product_grouper.group_skus_clustering()
-
-    def select_best_from_sku(
-        self,
-        image_paths: List[str],
-    ) -> tuple:
-        """
-        Select best main image from multiple images of the same SKU
-
-        Args:
-            image_paths: List of image paths
-
-        Returns:
-            (best index, processed image, all candidate scores)
-        """
-        images = [Image.open(p) for p in image_paths]
-
-        best_idx, best_img, candidates = self.image_selector.select_best(
-            images,
-            return_all_scores=True,
-        )
-
-        return best_idx, best_img, candidates

@@ -77,10 +77,6 @@ def test_inpainting_failure_returns_the_original_image_and_reports_failure(monke
     assert result.image is img
 
 
-def test_auto_removal_returns_just_the_cleaned_image():
-    assert isinstance(WatermarkRemover().remove_watermark_auto(image_with_corner_text()), Image.Image)
-
-
 def test_ocr_regions_keep_text_and_drop_low_confidence_hits():
     box = [[10, 20], [90, 20], [90, 40], [10, 40]]
     remover = ocr_remover([(box, "SHOP.COM", 0.9), (box, "noise", 0.2)])

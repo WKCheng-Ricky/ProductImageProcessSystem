@@ -52,7 +52,6 @@ class CollageDetector:
             min_product_area_ratio: Minimum product area ratio
         """
         self.min_split_size = min_split_size
-        self.line_threshold = line_detection_threshold
         self.min_area_ratio = min_product_area_ratio
 
     def _to_cv2(self, img: Image.Image) -> np.ndarray:

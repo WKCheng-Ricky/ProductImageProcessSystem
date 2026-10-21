@@ -306,21 +306,4 @@ class WatermarkRemover:
                 success=False
             )
 
-    def remove_watermark_auto(
-        self,
-        img: Image.Image
-    ) -> Image.Image:
-        """
-        Automatically detect and remove watermarks (simplified version)
-
-        Args:
-            img: Input image
-
-        Returns:
-            Processed image
-        """
-        result = self.remove_watermark(img)
-        return result.image
-
-
 # Usage example

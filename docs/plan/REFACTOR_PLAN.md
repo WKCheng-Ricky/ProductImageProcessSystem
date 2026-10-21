@@ -75,7 +75,7 @@ The green `ruff` result is weaker than it looks: `pyproject.toml` ignores F401 (
 | 3 | Done. Double-checked lock, failed builds not cached; a vector DB failure in the batch duplicate check now fails that image instead of being swallowed. |
 | 4 | Done as plain constants in `config.py`; defaults unchanged and pinned by `tests/test_config_defaults.py`. The ProductGrouper 0.85 default and `main.py`'s 0.95 are left as they were. |
 | 5 | Partly done. Clients no longer receive `str(e)` on 500s and the Milvus fallback logs an error. The repeated `try/except` blocks were not collapsed into one handler. |
-| 6 | Done for `src/pipeline`; `pipeline_preloader.py` keeps its script entry point. |
+| 6 | Done for `src/pipeline`. The unused `pipeline_preloader.py` script was deleted; `--preload-model` in `main.py` does its job. |
 | 7 | Done for F401, F541, F841 and E741. E501 stays ignored. |
 | 8 | Done. `tests/test_pipeline_e2e.py` runs the real pipeline and `tests/test_web_flow_e2e.py` the real page flow with a fake thumbnail embedder; plus Milvus guard and stage tests. |
 | 9 | Done, but not yet run against real weights (`pytest -m model` skips in this venv, which has no torch). Run it and a Docker build before merging. |

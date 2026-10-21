@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
-from .clustering import connected_components_cluster, dbscan_cluster
+from .clustering import dbscan_cluster
 
 logger = logging.getLogger(__name__)
 
@@ -54,10 +54,6 @@ class ProductGroupUUID:
         if product_id not in self.member_ids:
             self.member_ids.append(product_id)
 
-    def remove_member(self, product_id: str):
-        if product_id in self.member_ids:
-            self.member_ids.remove(product_id)
-
     def to_dict(self) -> dict:
         return {
             "group_id": self.group_id,
@@ -66,16 +62,6 @@ class ProductGroupUUID:
             "created_at": self.created_at,
             "size": self.size,
         }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "ProductGroupUUID":
-        return cls(
-            group_id=data["group_id"],
-            member_ids=data.get("member_ids", []),
-            representative_id=data.get("representative_id"),
-            created_at=data.get("created_at"),
-        )
-
 
 class VectorDatabase:
     """Vector database interface (Abstract class)"""
@@ -108,17 +94,6 @@ class InMemoryVectorDB(VectorDatabase):
         self.embeddings[id] = embedding
         self.metadata[id] = metadata or {}
         logger.info(f"InMemory: Inserted ID {id}, dimension: {len(embedding)}, total: {self.size()}")
-
-    def insert_batch(
-        self,
-        ids: List[str],
-        embeddings: np.ndarray,
-        metadata_list: Optional[List[dict]] = None,
-    ):
-        if metadata_list is None:
-            metadata_list = [{}] * len(ids)
-        for id, embedding, meta in zip(ids, embeddings, metadata_list):
-            self.insert(id, embedding, meta)
 
     def search(self, embedding: np.ndarray, top_k: int = 10, threshold: float = 0.0) -> List[SearchResult]:
         if not self.embeddings:
@@ -241,94 +216,6 @@ class ProductGrouper:
         groups.sort(key=lambda x: x.size, reverse=True)
         logger.info(f"Found {len(groups)} product groups")
         return groups
-
-    def group_skus_connected_components(
-        self,
-        embeddings: Optional[np.ndarray] = None,
-        sku_ids: Optional[List[str]] = None,
-    ) -> List[ProductGroup]:
-        if embeddings is None or sku_ids is None:
-            if hasattr(self.db, 'get_all_embeddings'):
-                sku_ids, embeddings = self.db.get_all_embeddings()
-            else:
-                raise ValueError("Must provide embeddings and sku_ids")
-
-        n = len(embeddings)
-        if n == 0:
-            return []
-
-        _, labels = connected_components_cluster(embeddings, self.threshold)
-
-        groups_dict: Dict[int, List[str]] = {}
-        for id, label in zip(sku_ids, labels):
-            if label not in groups_dict:
-                groups_dict[label] = []
-            groups_dict[label].append(id)
-
-        groups = []
-        for group_id, group_sku_ids in groups_dict.items():
-            if len(group_sku_ids) < 2:
-                continue
-            groups.append(ProductGroup(
-                group_id=int(group_id),
-                ids=group_sku_ids,
-                representative_id=group_sku_ids[0],
-                size=len(group_sku_ids),
-            ))
-
-        groups.sort(key=lambda x: x.size, reverse=True)
-        return groups
-
-    def merge_groups(self, groups: List[ProductGroup], merge_threshold: float = 0.9) -> List[ProductGroup]:
-        if len(groups) <= 1:
-            return groups
-
-        group_embeddings = []
-        embedding_dim = None
-        for group in groups:
-            rep_result = self.db.get(group.representative_id)
-            if rep_result:
-                group_embeddings.append(rep_result.embedding)
-                if embedding_dim is None:
-                    embedding_dim = len(rep_result.embedding)
-            else:
-                dim = embedding_dim if embedding_dim is not None else 512
-                group_embeddings.append(np.zeros(dim))
-
-        group_embeddings = np.array(group_embeddings)
-        merged = [False] * len(groups)
-        new_groups = []
-
-        for i, group_i in enumerate(groups):
-            if merged[i]:
-                continue
-
-            similar_groups = [group_i]
-            merged[i] = True
-
-            for j in range(i + 1, len(groups)):
-                if merged[j]:
-                    continue
-                sim = np.dot(group_embeddings[i], group_embeddings[j])
-                if sim >= merge_threshold:
-                    similar_groups.append(groups[j])
-                    merged[j] = True
-
-            if len(similar_groups) == 1:
-                new_groups.append(group_i)
-            else:
-                merged_ids = []
-                for g in similar_groups:
-                    merged_ids.extend(g.ids)
-                new_groups.append(ProductGroup(
-                    group_id=len(new_groups),
-                    ids=merged_ids,
-                    representative_id=similar_groups[0].representative_id,
-                    size=len(merged_ids),
-                ))
-
-        return new_groups
-
 
 # Re-export Milvus classes — import deferred to bottom to avoid circular dependency
 # (milvus_db.py imports SearchResult/VectorDatabase/ProductGroupUUID from this module)
