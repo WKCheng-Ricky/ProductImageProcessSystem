@@ -13,3 +13,13 @@ extend-exclude = ["venv", "data", "uploads", "resource", "example"]
 select = ["E", "F"]
 # Existing violations ignored so CI starts green; tighten one rule at a time.
 ignore = ["E501"]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+# Loads the real CLIP model, so it is covered only by `pytest -m model`, not the fast suite.
+omit = ["src/pipeline/clip_aesthetic_scorer.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true

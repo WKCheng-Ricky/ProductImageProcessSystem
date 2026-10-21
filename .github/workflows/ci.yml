@@ -20,9 +20,9 @@ jobs:
           cache: pip
       # Tests stub torch/open_clip (see tests/conftest.py), so only the light deps are installed.
       - name: Install test dependencies
-        run: pip install numpy Pillow opencv-python-headless scikit-learn scipy fastapi httpx "jinja2<3.1.5" python-multipart python-dotenv uvicorn tqdm pytest ruff
+        run: pip install numpy Pillow opencv-python-headless scikit-learn scipy fastapi httpx "jinja2<3.1.5" python-multipart python-dotenv uvicorn tqdm pytest pytest-cov ruff
       - run: ruff check .
-      - run: pytest -q
+      - run: pytest -q --cov=src --cov-fail-under=80
 
   docker:
     runs-on: ubuntu-latest

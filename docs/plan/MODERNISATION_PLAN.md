@@ -100,12 +100,15 @@ Do this before Tier 2. The typed-settings item below builds on step 4 of the ref
 
 ### Test coverage (part of the refactor tier)
 
-No coverage has been measured yet, and `pytest-cov` is not in the dev requirements. The refactor tier is not done until coverage is measured, reported and at least **80% line coverage** of `src/` in the fast suite.
+Baseline before this work: 47% (branch coverage, fast suite). The refactor tier is not done until the fast suite reaches at least **80% coverage** of `src/`. **Result: 82%**, gated in CI with `--cov-fail-under=80`.
 
 Steps, one commit each:
 1. **Measure the baseline.** Add `pytest-cov` to `requirements-dev.txt` and a `[tool.coverage]` section to `pyproject.toml` (`source = ["src"]`, branch coverage on). Run `pytest --cov=src --cov-report=term-missing` and record the per-file numbers in `docs/REFACTOR_PLAN.md`.
 2. **Close the gaps.** Add fast tests, with no weights, for the lowest-covered modules that hold our own logic: the web routes (error paths and 404/400 cases), `session_manager.py`, `product_grouper.py`, `milvus_db.py` (via the fake client) and the image stages. Test behaviour, not lines: no assertion-free tests written only to raise the number.
 3. **Gate it in CI.** Run `pytest --cov=src --cov-fail-under=80` in the `test` job, so a PR that drops coverage below 80% fails.
+
+Result (fast suite, branch coverage, no weights, 244 tests): **82.1%** including everything, up from 47%. The one exclusion is `clip_aesthetic_scorer.py` (`[tool.coverage.run] omit`): it loads the real CLIP model, so only `-m model` exercises it. With it omitted the figure is 85.5%. Still low:
+- `collage_detector.py` 72%, `product_image_pipeline.py` 78%, and the `watermark`, `duplicate`, `embedding` and `search` routes at 71-75%: mostly error branches.
 
 Scope rules, stated so the number stays honest:
 - The 80% is measured on the fast suite only. The CI `test` job has no torch or rembg, so code that only runs with real weights (`embedding_generator.py`, `clip_aesthetic_scorer.py`, the loading parts of `model_cache.py` and `clip_loader.py`) is covered by the opt-in `-m model` tests and is reported separately.
