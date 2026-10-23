@@ -33,29 +33,29 @@ class DuplicateResponse(BaseModel):
 
 
 @router.get("/duplicate/stats")
-async def get_stats():
+def get_stats():
     """Get current database statistics."""
     try:
         stats = get_database_stats()
         return stats
     except Exception as e:
-        logger.error(f"Error getting database stats: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error getting database stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/duplicate/backups")
-async def get_backups():
+def get_backups():
     """List all backup files."""
     try:
         backups = list_backups()
         return {"backups": backups}
     except Exception as e:
-        logger.error(f"Error listing backups: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error listing backups: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/duplicate", response_model=DuplicateResponse)
-async def duplicate_database(request: DuplicateRequest):
+def duplicate_database(request: DuplicateRequest):
     """
     Backup and duplicate all records in the database.
 
@@ -71,5 +71,5 @@ async def duplicate_database(request: DuplicateRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Error during duplication: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error during duplication: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")

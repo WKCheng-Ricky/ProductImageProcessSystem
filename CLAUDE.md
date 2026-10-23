@@ -29,9 +29,19 @@ python main.py --serve --preload-model    # Pre-warm models before serving
 python main.py --search-image query.jpg   # Image similarity search
 python main.py --search-text "shampoo"    # Text-based search
 
-# Docker (uses Milvus by default, exposes port 8001)
-docker-compose up --build
+# Container (nerdctl compose; Milvus by default, host port 8001 -> container 8000)
+nerdctl compose up -d --build --force-recreate   # build the image and roll out the new code
+nerdctl compose ps                               # wait for the service to report healthy
+curl -s localhost:8001/health                    # {"status":"healthy",...}
+nerdctl compose logs -f                          # follow logs
+nerdctl compose down                             # stop (named volumes app-data/app-uploads keep the data)
 ```
+
+Container gotchas (details in `docs/DOCKER.md`):
+- Plain `up -d --build` does NOT replace a running container when the compose config is unchanged, so the old code keeps serving. Always add `--force-recreate` to roll out.
+- Recreating stops the service for about a minute while models preload. If it fails with `port is already allocated`, run the same command again.
+
+UI checks use a local Playwright MCP server in `.mcp.json` (gitignored; pinned `@playwright/mcp`, headless, isolated profile). Recreate it with `claude mcp add --scope project playwright -- npx -y @playwright/mcp@0.0.83 --headless --isolated`. Claude Code asks to approve it on the first session after it is added, and a running session must be restarted to load it. Point it at `http://localhost:8001` after a rollout.
 
 ## Architecture
 
@@ -53,7 +63,7 @@ Backgrounds, watermarks, and text overlays distort embeddings. Cleaning first en
 3. **BestImageSelector** — picks highest quality from collage splits (uses scorer + preprocessor internally)
 4. **ImagePreprocessor** — rembg/U2Net background removal, crops to product
 5. **ImageQualityScorer** — facade combining `BasicQualityScorer` (cv2 metrics) + `AestheticScorer` (CLIP-based LAION predictor)
-6. **TextImageEmbeddingGenerator** — open_clip ViT-L-14; supports both image and text queries
+6. **TextImageEmbeddingGenerator** — open_clip ViT-B-32 (ViT-L-14 optional); supports both image and text queries
 7. **ProductGrouper** — wraps `VectorDatabase`, runs DBSCAN clustering for grouping
 
 Embedding generator, vector DB, and product grouper are lazy-loaded properties — they only initialize on first access to avoid loading CLIP/rembg at startup.
@@ -72,7 +82,7 @@ FastAPI app with session-based multi-page flow. Each uploaded image gets a `sess
 
 Page flow (single image): upload → watermark → quality_basic → quality_aesthetic → split → preprocessing → embedding → search
 
-Additional standalone pages: `/batch/upload`, `/grouping`, `/duplicate`
+Additional standalone pages: `/batch/upload`, `/grouping`, `/duplicate`, `/search/text`, `/search/browse`
 
 All ML operations are called via `src/web/services/pipeline_service.py` which holds a singleton `ProductImagePipeline`. Routes under `src/web/routes/` handle API endpoints (`/api/...`) that the JS frontend calls; page routes in `src/web/app.py` serve HTML templates.
 
@@ -85,8 +95,8 @@ All ML operations are called via `src/web/services/pipeline_service.py` which ho
 | Similarity | Action |
 |------------|--------|
 | > 90% | Auto-match (same product) |
-| 80–90% | Similar product (variant/related) |
-| < 80% | Different product |
+| 70–90% | Similar product (variant/related) |
+| < 70% | Different product |
 
 ## Configuration
 
@@ -96,7 +106,7 @@ Via `.env` file or environment variables:
 USE_MILVUS=true                      # Persistent vector DB (default: false)
 MILVUS_LITE_PATH=./data/milvus.db    # Milvus Lite file path
 MILVUS_COLLECTION=product_embeddings
-CLIP_MODEL=ViT-L-14                  # CLIP model variant (default: ViT-L-14)
+CLIP_MODEL=ViT-B-32                  # CLIP model variant (default: ViT-B-32; ViT-L-14 optional)
 CLIP_PRETRAINED=openai               # Pretrained weights (default: openai)
 ```
 
@@ -110,7 +120,7 @@ Pipeline constructor parameters (override per-instance):
 | Component | Technology |
 |-----------|------------|
 | Background Removal | rembg (U2Net) |
-| Embedding Model | open_clip (ViT-L-14) |
+| Embedding Model | open_clip (ViT-B-32, ViT-L-14 optional) |
 | Quality Scoring | LAION aesthetic predictor (CLIP-based) |
 | Vector DB | InMemoryVectorDB (dev) / Milvus Lite (prod) |
 | Clustering | DBSCAN (scikit-learn) |

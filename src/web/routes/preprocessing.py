@@ -26,7 +26,7 @@ def get_session_manager(request: Request) -> SessionManager:
 
 
 @router.post("/session/{session_id}/preprocess", response_model=PreprocessingResultResponse)
-async def preprocess_image(
+def preprocess_image(
     session_id: str,
     remove_bg: bool = True,
     crop: bool = True,
@@ -73,7 +73,7 @@ async def preprocess_image(
         logger.info(f"Processing image: {image_path}, size: {original_size}")
     except Exception as e:
         logger.error(f"Error loading image: {e}")
-        raise HTTPException(status_code=500, detail=f"Error loading image: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error loading image")
 
     # Run preprocessing
     try:
@@ -92,7 +92,7 @@ async def preprocess_image(
         logger.info(f"Preprocessing complete: bg_removed={result.background_removed}")
     except Exception as e:
         logger.error(f"Error in preprocessing: {e}")
-        raise HTTPException(status_code=500, detail=f"Error preprocessing image: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error preprocessing image")
 
     # Save processed image
     session_path = session_manager.get_session_path(session_id)
@@ -103,7 +103,7 @@ async def preprocess_image(
         logger.info(f"Saved processed image to {processed_path}")
     except Exception as e:
         logger.error(f"Error saving processed image: {e}")
-        raise HTTPException(status_code=500, detail=f"Error saving image: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error saving image")
 
     # Update session
     preprocessing_data = {
@@ -122,7 +122,7 @@ async def preprocess_image(
         })
     except Exception as e:
         logger.error(f"Error updating session: {e}")
-        raise HTTPException(status_code=500, detail=f"Error updating session: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error updating session")
 
     return PreprocessingResultResponse(
         processed_image_url=f"/uploads/sessions/{session_id}/preprocessed.jpg",
@@ -135,7 +135,7 @@ async def preprocess_image(
 
 
 @router.post("/session/{session_id}/preprocess/bypass")
-async def bypass_preprocessing(
+def bypass_preprocessing(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):
@@ -173,7 +173,7 @@ async def bypass_preprocessing(
         logger.info(f"Bypass preprocessing: copied {image_path} to {processed_path}")
     except Exception as e:
         logger.error(f"Error in bypass preprocessing: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
     # Update session
     preprocessing_data = {
@@ -199,7 +199,7 @@ async def bypass_preprocessing(
 
 
 @router.get("/session/{session_id}/preprocess", response_model=PreprocessingResultResponse)
-async def get_preprocessing_results(
+def get_preprocessing_results(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):
@@ -226,4 +226,4 @@ async def get_preprocessing_results(
         raise
     except Exception as e:
         logger.error(f"Error retrieving preprocessing results: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

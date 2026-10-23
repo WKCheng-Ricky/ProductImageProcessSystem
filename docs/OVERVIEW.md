@@ -94,10 +94,10 @@ By cleaning images first, we ensure embeddings capture actual product features r
   How CLIP Search Works                                                           
                                                                                   
   STORING:                                                  
-  Image → CLIP Image Encoder → vector [768 dims] → Milvus                         
+  Image → CLIP Image Encoder → vector [512 dims] → Milvus                         
                                                                                   
   SEARCHING:                                                      
-  Text → CLIP Text Encoder → vector [768 dims] → Search Milvus                    
+  Text → CLIP Text Encoder → vector [512 dims] → Search Milvus                    
                                                       ↓                           
                                                 Finds similar IMAGE vectors       
 ```
@@ -313,7 +313,7 @@ There is some significant shortcut taken when developing this prototype / demost
 - The current code base only use `CPU`, as it is easier to run on GCP. 
 - Machine learning model with `U2Net`, `CLIP` and `LAION` could be significantly sped up with `GPU`
 - Model selection is limited to weaker for faster processing speed, scarficing accuracy. 
-- The selected model, `ViT-L-14`, only has 75.3 zero-shot top-1 accuracy on ImageNet-1k<sup>[[13]](#ref13)</sup>.
+- The default model, `ViT-B-32` (chosen for fast deployment; `ViT-L-14` is optional), is weaker than larger CLIP models: `ViT-L-14` reaches only 75.3 zero-shot top-1 accuracy on ImageNet-1k<sup>[[13]](#ref13)</sup>.
 - For rapid developement, python is used for rapid development rate, enormous documentation, and ease of managing package, however:
 - Web Hosting, Model processing and Database connection all using Python, which may not be ideal.
 - Python excel at handling Machine learning model, but it can have even less overhead with C++ or Rust

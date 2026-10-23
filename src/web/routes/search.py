@@ -14,7 +14,16 @@ import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from src.pipeline.embedding_generator import TextImageEmbeddingGenerator
-from ..models.schemas import SearchResultItem, SearchResultsResponse, TextSearchRequest, TextSearchResultsResponse
+from ..models.schemas import (
+    BrowseImageItem,
+    RandomImagesResponse,
+    SearchResultItem,
+    SearchResultsResponse,
+    TextSearchRequest,
+    TextSearchResultsResponse,
+)
+from ..identifiers import PathPlainId
+from ..services.browse_service import build_browse_service
 from ..services.pipeline_service import get_pipeline
 from ..services.session_manager import SessionManager
 
@@ -28,7 +37,7 @@ def get_session_manager(request: Request) -> SessionManager:
 
 
 @router.post("/session/{session_id}/search", response_model=SearchResultsResponse)
-async def search_similar_products(
+def search_similar_products(
     session_id: str,
     top_k: int = 10,
     threshold: float = 0.70,
@@ -68,7 +77,7 @@ async def search_similar_products(
         logger.info(f"Loaded embedding from {embedding_path}, shape: {embedding.shape}")
     except Exception as e:
         logger.error(f"Error loading embedding: {e}")
-        raise HTTPException(status_code=500, detail=f"Error loading embedding: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error loading embedding")
 
     # Search for similar products
     try:
@@ -93,7 +102,7 @@ async def search_similar_products(
             logger.warning(f"No similar products found (database has {db_size} embeddings)")
     except Exception as e:
         logger.error(f"Error searching for similar products: {e}")
-        raise HTTPException(status_code=500, detail=f"Error searching: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error searching")
 
     # Convert results to response format
     result_items = []
@@ -133,7 +142,7 @@ async def search_similar_products(
         "threshold": threshold,
         "results": [
             {
-                "id": item.id,
+                "id": item.id.plainId,
                 "score": item.score,
                 "confidence_level": item.confidence_level
             }
@@ -148,7 +157,7 @@ async def search_similar_products(
         })
     except Exception as e:
         logger.error(f"Error updating session: {e}")
-        raise HTTPException(status_code=500, detail=f"Error updating session: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error updating session")
 
     return SearchResultsResponse(
         results=result_items,
@@ -157,9 +166,37 @@ async def search_similar_products(
     )
 
 
+@router.get("/search/random", response_model=RandomImagesResponse)
+def random_images(count: int = 10):
+    """
+    Sample stored images to start a search from.
+
+    Uses the best image of randomly chosen product groups when grouping has been run,
+    otherwise random images that are not near-duplicates of each other.
+    """
+    if count < 1 or count > 50:
+        raise HTTPException(status_code=400, detail="count must be between 1 and 50")
+
+    try:
+        sample = build_browse_service(get_pipeline()).sample(count)
+    except Exception as e:
+        logger.error(f"Error sampling images: {e}")
+        raise HTTPException(status_code=500, detail="Error sampling images")
+
+    return RandomImagesResponse(
+        images=[
+            BrowseImageItem(id=image.id, image_url=image.image_url, original_image_url=image.original_image_url)
+            for image in sample.images
+        ],
+        mode=sample.mode,
+        total_in_db=sample.total_in_db,
+        ungrouped_count=sample.ungrouped_count,
+    )
+
+
 @router.get("/search/by-image/{image_id}", response_model=SearchResultsResponse)
-async def search_by_image_id(
-    image_id: str,
+def search_by_image_id(
+    image_id: PathPlainId,
     top_k: int = 10,
     threshold: float = 0.70
 ):
@@ -202,7 +239,7 @@ async def search_by_image_id(
         raise
     except Exception as e:
         logger.error(f"Error searching for similar products: {e}")
-        raise HTTPException(status_code=500, detail=f"Error searching: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error searching")
 
     # Convert results to response format
     result_items = []
@@ -231,7 +268,7 @@ async def search_by_image_id(
 
 
 @router.get("/session/{session_id}/search", response_model=SearchResultsResponse)
-async def get_search_results(
+def get_search_results(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):
@@ -277,11 +314,11 @@ async def get_search_results(
         raise
     except Exception as e:
         logger.error(f"Error retrieving search results: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/search/by-text", response_model=TextSearchResultsResponse)
-async def search_by_text(request: TextSearchRequest):
+def search_by_text(request: TextSearchRequest):
     """
     Search for products by text description.
 
@@ -323,7 +360,7 @@ async def search_by_text(request: TextSearchRequest):
         raise HTTPException(status_code=500, detail="Text search not available: embedding generator not found")
     except Exception as e:
         logger.error(f"Error in text search: {e}")
-        raise HTTPException(status_code=500, detail=f"Error searching: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error searching")
 
     # Convert results to response format
     result_items = []

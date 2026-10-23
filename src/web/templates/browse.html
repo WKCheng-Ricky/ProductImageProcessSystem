@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Browse & Search - Product Image Processing{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-grid-3x3-gap"></i>
+            Browse &amp; Search
+        </h2>
+        <p class="text-muted">Pick a product photo to find similar products. No description needed.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div id="grouping-hint" class="alert alert-info d-none d-flex justify-content-between align-items-center">
+            <span id="grouping-hint-text"></span>
+            <a href="/grouping" class="btn btn-sm btn-info">
+                <i class="bi bi-diagram-3"></i>
+                Group products
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Pick an image</h5>
+                <button id="shuffle-btn" class="btn btn-sm btn-light">
+                    <i class="bi bi-shuffle"></i>
+                    Shuffle
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="loading" class="text-center my-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading images...</p>
+                </div>
+
+                <div id="summary" class="text-muted small mb-3 d-none"></div>
+                <div id="grid" class="row g-3"></div>
+
+                <div id="empty-db" class="d-none text-center my-5">
+                    <i class="bi bi-inbox display-1 text-muted"></i>
+                    <p class="mt-2 text-muted">No images yet.</p>
+                    <a href="/batch/upload" class="btn btn-success">
+                        <i class="bi bi-folder2-open"></i>
+                        Upload a batch
+                    </a>
+                </div>
+
+                <div id="no-thumbnails" class="d-none alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    No stored images have thumbnails to show.
+                </div>
+
+                <div id="error" class="d-none alert alert-danger">
+                    <i class="bi bi-exclamation-circle"></i>
+                    <span id="error-message"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <a href="/" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i>
+                Back to Home
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const STATE_IDS = ['loading', 'summary', 'empty-db', 'no-thumbnails', 'error', 'grouping-hint'];
+
+    document.getElementById('shuffle-btn').addEventListener('click', loadImages);
+    loadImages();
+
+    function hideAll() {
+        STATE_IDS.forEach((id) => document.getElementById(id).classList.add('d-none'));
+        document.getElementById('grid').replaceChildren();
+    }
+
+    async function loadImages() {
+        hideAll();
+        document.getElementById('loading').classList.remove('d-none');
+
+        try {
+            const response = await fetch('/api/search/random?count=10');
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.detail || 'Could not load images');
+            }
+            showImages(await response.json());
+        } catch (error) {
+            document.getElementById('loading').classList.add('d-none');
+            document.getElementById('error').classList.remove('d-none');
+            document.getElementById('error-message').textContent = error.message;
+        }
+    }
+
+    function showImages(data) {
+        document.getElementById('loading').classList.add('d-none');
+
+        if (data.total_in_db === 0) {
+            document.getElementById('empty-db').classList.remove('d-none');
+            return;
+        }
+        if (data.images.length === 0) {
+            document.getElementById('no-thumbnails').classList.remove('d-none');
+            return;
+        }
+
+        showGroupingHint(data);
+
+        const summary = document.getElementById('summary');
+        summary.textContent = `Showing ${data.images.length} of ${data.total_in_db} images`;
+        summary.classList.remove('d-none');
+
+        const grid = document.getElementById('grid');
+        data.images.forEach((image) => grid.appendChild(buildTile(image)));
+    }
+
+    function showGroupingHint(data) {
+        let message = null;
+        if (data.mode === 'random' && data.ungrouped_count > 0) {
+            const subject = data.ungrouped_count === 1 ? "1 image isn't" : `${data.ungrouped_count} images aren't`;
+            message = `${subject} in any group yet, so this is a random sample. Re-run grouping to get one image per product group.`;
+        } else if (data.mode === 'random') {
+            message = 'Showing a random sample. Group your products for a better selection.';
+        }
+        if (message) {
+            document.getElementById('grouping-hint-text').textContent = message;
+            document.getElementById('grouping-hint').classList.remove('d-none');
+        }
+    }
+
+    function buildTile(image) {
+        const column = document.createElement('div');
+        column.className = 'col-6 col-md-4 col-lg-3';
+
+        const link = document.createElement('a');
+        link.href = `/search/by-image/${encodeURIComponent(image.id)}`;
+        link.className = 'card h-100 shadow-sm text-decoration-none';
+
+        const img = document.createElement('img');
+        img.src = image.image_url;
+        img.alt = image.id;
+        img.className = 'card-img-top';
+        img.style.objectFit = 'cover';
+        img.style.height = '200px';
+
+        const body = document.createElement('div');
+        body.className = 'card-body p-2 text-center small text-muted text-truncate';
+        body.textContent = image.id;
+
+        link.append(img, body);
+        column.appendChild(link);
+        return column;
+    }
+</script>
+{% endblock %}

@@ -31,7 +31,7 @@ def get_session_manager(request: Request) -> SessionManager:
 
 
 @router.post("/session/{session_id}/quality", response_model=QualityScoreResponse)
-async def score_quality(
+def score_quality(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):
@@ -64,7 +64,7 @@ async def score_quality(
         logger.info(f"Scoring quality for: {image_path}")
     except Exception as e:
         logger.error(f"Error loading image: {e}")
-        raise HTTPException(status_code=500, detail=f"Error loading image: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error loading image")
 
     # Run quality scoring
     try:
@@ -73,7 +73,7 @@ async def score_quality(
         logger.info(f"Quality score: {quality_score.overall:.2f}")
     except Exception as e:
         logger.error(f"Error in quality scoring: {e}")
-        raise HTTPException(status_code=500, detail=f"Error scoring quality: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error scoring quality")
 
     # Get original image URL (with correct extension)
     original_filename = image_path.name
@@ -111,13 +111,13 @@ async def score_quality(
         })
     except Exception as e:
         logger.error(f"Error updating session: {e}")
-        raise HTTPException(status_code=500, detail=f"Error updating session: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error updating session")
 
     return QualityScoreResponse(**quality_data)
 
 
 @router.get("/session/{session_id}/quality", response_model=QualityScoreResponse)
-async def get_quality_score(
+def get_quality_score(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):
@@ -137,4 +137,4 @@ async def get_quality_score(
         raise
     except Exception as e:
         logger.error(f"Error retrieving quality score: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

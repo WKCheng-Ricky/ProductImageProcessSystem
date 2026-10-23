@@ -14,11 +14,13 @@ import time
 import logging
 import uuid
 from pathlib import Path
-from typing import Optional
 
 from ..models.schemas import EmbeddingResultResponse
+from src.pipeline.identifiers import PlainId
+from ..identifiers import QueryPlainId
 from ..services.session_manager import SessionManager
 from ..services.pipeline_service import get_pipeline
+from src.pipeline.config import DUPLICATE_SIMILARITY_THRESHOLD
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -29,9 +31,9 @@ def get_session_manager(request: Request) -> SessionManager:
 
 
 @router.post("/session/{session_id}/embedding", response_model=EmbeddingResultResponse)
-async def generate_embedding(
+def generate_embedding(
     session_id: str,
-    id: Optional[str] = None,
+    id: QueryPlainId = None,
     session_manager: SessionManager = Depends(get_session_manager)
 ):
     """
@@ -50,11 +52,12 @@ async def generate_embedding(
 
     # Use id from parameter, fallback to session
     if id is None:
-        id = session.get("id")
+        stored_id = session.get("id")
+        id = PlainId(stored_id) if stored_id is not None else None
 
     # if id is not provided by user
     if id is None:
-        id = str(uuid.uuid4())
+        id = PlainId(str(uuid.uuid4()))
 
     # Get preprocessed image (if available), otherwise use best available
     if "preprocessing_result" in session:
@@ -77,7 +80,7 @@ async def generate_embedding(
         logger.info(f"Generating embedding for: {image_path}")
     except Exception as e:
         logger.error(f"Error loading image: {e}")
-        raise HTTPException(status_code=500, detail=f"Error loading image: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error loading image")
 
     # Generate embedding (may take time on first request)
     try:
@@ -91,7 +94,7 @@ async def generate_embedding(
         logger.info(f"Embedding generated in {generation_time:.2f}s, model: {embedding_result.model_name}, dimension: {embedding_result.dimension}")
     except Exception as e:
         logger.error(f"Error generating embedding: {e}")
-        raise HTTPException(status_code=500, detail=f"Error generating embedding: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error generating embedding")
 
     # Save embedding
     session_path = session_manager.get_session_path(session_id)
@@ -102,13 +105,13 @@ async def generate_embedding(
         logger.info(f"Saved embedding to {embedding_path}")
     except Exception as e:
         logger.error(f"Error saving embedding: {e}")
-        raise HTTPException(status_code=500, detail=f"Error saving embedding: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error saving embedding")
 
     # Check for duplicate before inserting
     is_duplicate = False
     duplicate_of = None
     duplicate_score = None
-    DUPLICATE_THRESHOLD = 0.999
+    DUPLICATE_THRESHOLD = DUPLICATE_SIMILARITY_THRESHOLD
 
     try:
         existing_results = pipeline.vector_db.search(
@@ -164,10 +167,10 @@ async def generate_embedding(
         "normalized": embedding_result.normalized,
         "generation_time": generation_time,
         "embedding_path": str(embedding_path),
-        "id": id,
+        "id": id.plainId,
         "saved_to_db": saved_to_db,
         "is_duplicate": is_duplicate,
-        "duplicate_of": duplicate_of,
+        "duplicate_of": duplicate_of.plainId if duplicate_of is not None else None,
         "duplicate_score": duplicate_score
     }
 
@@ -178,7 +181,7 @@ async def generate_embedding(
         })
     except Exception as e:
         logger.error(f"Error updating session: {e}")
-        raise HTTPException(status_code=500, detail=f"Error updating session: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error updating session")
 
     return EmbeddingResultResponse(
         model_name=embedding_result.model_name,
@@ -194,7 +197,7 @@ async def generate_embedding(
 
 
 @router.get("/session/{session_id}/embedding", response_model=EmbeddingResultResponse)
-async def get_embedding_info(
+def get_embedding_info(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):
@@ -225,4 +228,4 @@ async def get_embedding_info(
         raise
     except Exception as e:
         logger.error(f"Error retrieving embedding info: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

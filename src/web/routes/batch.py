@@ -14,13 +14,14 @@ import logging
 import uuid
 import time
 import gc
-import asyncio
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 from ..models.schemas import BatchUploadResponse, BatchProcessResponse, BatchImageResult
+from src.pipeline.identifiers import PlainId
 from ..services.session_manager import SessionManager
 from ..services.pipeline_service import get_pipeline
+from src.pipeline.config import DUPLICATE_SIMILARITY_THRESHOLD
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -112,7 +113,7 @@ async def batch_upload(
 
 
 @router.post("/batch/{batch_id}/process", response_model=BatchProcessResponse)
-async def process_batch(
+def process_batch(
     batch_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):
@@ -146,7 +147,7 @@ async def process_batch(
     })
 
     for idx, file_info in enumerate(files):
-        file_id = file_info["file_id"]
+        file_id = PlainId(file_info["file_id"])
         filename = file_info["filename"]
         image_path = Path(file_info["path"])
 
@@ -162,16 +163,12 @@ async def process_batch(
         try:
             img = Image.open(image_path).convert('RGB')
 
-            # Yield to event loop before CPU-intensive work
-            await asyncio.sleep(0)
 
             # Step 1: Aesthetic scoring
             quality_score = pipeline.quality_scorer.score(img)
             result.overall_score = quality_score.overall
             result.aesthetic_score = quality_score.aesthetic
 
-            # Yield to event loop
-            await asyncio.sleep(0)
 
             # Step 2: Preprocessing (remove BG, crop, resize to 512x512)
             preprocessed = pipeline.preprocessor.standardize(
@@ -190,38 +187,28 @@ async def process_batch(
             result.image_url = f"/uploads/batches/{batch_id}/{file_id}_processed.jpg"
             result.original_image_url = f"/uploads/batches/{batch_id}/{file_id}{file_info['extension']}"
 
-            # Yield to event loop
-            await asyncio.sleep(0)
 
             # Step 3: Generate embedding
             embedding_result = pipeline.embedding_generator.generate(preprocessed.image)
 
-            # Yield to event loop
-            await asyncio.sleep(0)
 
             # Step 4: Check for duplicate before saving
-            DUPLICATE_THRESHOLD = 0.999
+            DUPLICATE_THRESHOLD = DUPLICATE_SIMILARITY_THRESHOLD
             is_duplicate = False
             duplicate_of = None
             duplicate_score = None
 
-            try:
-                existing_results = pipeline.vector_db.search(
-                    embedding=embedding_result.embedding,
-                    top_k=1,
-                    threshold=DUPLICATE_THRESHOLD
-                )
+            existing_results = pipeline.vector_db.search(
+                embedding=embedding_result.embedding,
+                top_k=1,
+                threshold=DUPLICATE_THRESHOLD
+            )
 
-                # Yield to event loop after search
-                await asyncio.sleep(0)
-
-                if existing_results and existing_results[0].score >= DUPLICATE_THRESHOLD:
-                    is_duplicate = True
-                    duplicate_of = existing_results[0].id
-                    duplicate_score = existing_results[0].score
-                    logger.info(f"Duplicate detected for {filename}: {duplicate_score:.4f} match with {duplicate_of}")
-            except Exception as e:
-                logger.warning(f"Failed to check for duplicates: {e}")
+            if existing_results and existing_results[0].score >= DUPLICATE_THRESHOLD:
+                is_duplicate = True
+                duplicate_of = existing_results[0].id
+                duplicate_score = existing_results[0].score
+                logger.info(f"Duplicate detected for {filename}: {duplicate_score:.4f} match with {duplicate_of}")
 
             result.is_duplicate = is_duplicate
             result.duplicate_of = duplicate_of
@@ -244,8 +231,6 @@ async def process_batch(
                     metadata=metadata
                 )
 
-                # Yield to event loop after insert
-                await asyncio.sleep(0)
 
                 result.saved_to_db = True
                 successful += 1
@@ -258,7 +243,7 @@ async def process_batch(
 
         except Exception as e:
             logger.error(f"Error processing {filename}: {e}")
-            result.error = str(e)
+            result.error = f"Processing failed ({type(e).__name__}); see server logs"
             failed += 1
 
         finally:
@@ -284,8 +269,6 @@ async def process_batch(
             "skipped_duplicates": skipped_duplicates
         })
 
-        # Yield to event loop after each image to allow status requests
-        await asyncio.sleep(0)
 
     session_manager.update_session(f"batch_{batch_id}", {
         "status": "completed",
@@ -310,7 +293,7 @@ async def process_batch(
 
 
 @router.get("/batch/{batch_id}/status")
-async def get_batch_status(
+def get_batch_status(
     batch_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):

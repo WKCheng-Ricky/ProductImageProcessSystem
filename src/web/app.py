@@ -28,18 +28,16 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
+from src.logging_config import configure_logging
 from src.pipeline.config import CONFIG
 from .routes import upload, watermark, split, preprocessing, quality, embedding, search, batch, grouping, duplicate
-from .services.pipeline_service import get_pipeline
+from .identifiers import PathPlainId
+from .services.pipeline_service import PipelineService, get_pipeline
 from .services.session_manager import SessionManager
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+configure_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -193,11 +191,17 @@ async def embedding_page(request: Request, session_id: str):
 
 
 @app.get("/search/by-image/{image_id}", response_class=HTMLResponse)
-async def search_by_image_page(request: Request, image_id: str):
+async def search_by_image_page(request: Request, image_id: PathPlainId):
     """Search similar products by image ID"""
     return templates.TemplateResponse(request, "search_by_image.html", {
         "image_id": image_id
     })
+
+
+@app.get("/search/browse", response_class=HTMLResponse)
+async def search_browse_page(request: Request):
+    """Pick a stored image to start a similarity search from"""
+    return templates.TemplateResponse(request, "browse.html", {})
 
 
 @app.get("/search/text", response_class=HTMLResponse)
@@ -290,7 +294,34 @@ async def delete_session(session_id: str):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "service": "product-image-processing"}
+    return {"status": "healthy", "service": "product-image-processing", "version": app.version}
+
+
+@app.get("/ready")
+async def readiness_check():
+    """Readiness: session storage writable and, if already loaded, vector DB reachable. Never loads models."""
+    checks = {}
+    try:
+        probe = app.state.session_manager.storage_dir / ".ready_probe"
+        probe.write_text("ok")
+        probe.unlink()
+        checks["session_storage"] = "ok"
+    except Exception as e:
+        checks["session_storage"] = f"error: {e}"
+
+    pipeline = PipelineService._pipeline
+    if pipeline is None:
+        checks["vector_db"] = "not_initialised"
+    else:
+        try:
+            pipeline.vector_db.size()
+            checks["vector_db"] = "ok"
+        except Exception as e:
+            checks["vector_db"] = f"error: {e}"
+
+    ready = not any(str(v).startswith("error") for v in checks.values())
+    return JSONResponse({"status": "ready" if ready else "not_ready", "checks": checks},
+                        status_code=200 if ready else 503)
 
 
 @app.get("/api/vector-db/health")

@@ -1,0 +1,25 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-m 'not model'"
+markers = ["model: loads real ML model weights (slow); run with `pytest -m model`"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["venv", "data", "uploads", "resource", "example"]
+
+[tool.ruff.lint]
+select = ["E", "F"]
+# Existing violations ignored so CI starts green; tighten one rule at a time.
+ignore = ["E501"]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+# Loads the real CLIP model, so it is covered only by `pytest -m model`, not the fast suite.
+omit = ["src/pipeline/clip_aesthetic_scorer.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true

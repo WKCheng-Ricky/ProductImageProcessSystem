@@ -9,7 +9,6 @@ Project: Product Image Processing System
 
 from fastapi import APIRouter, HTTPException
 import logging
-from typing import List, Optional, Dict, Any
 
 from ..models.schemas import (
     GroupMemberItem,
@@ -17,9 +16,11 @@ from ..models.schemas import (
     GroupingStatsResponse,
     GroupingResultsResponse,
 )
+from ..identifiers import PathPlainId
 from ..services.pipeline_service import get_pipeline
 from src.pipeline.milvus_db import ProductGroupManager, ProductGroupsDB
 from src.pipeline.config import CONFIG
+from src.pipeline.config import GROUPING_SIMILARITY_THRESHOLD, GROUPING_TOP_K
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -30,15 +31,15 @@ def get_group_manager() -> ProductGroupManager:
     pipeline = get_pipeline()
     return ProductGroupManager(
         vector_db=pipeline.vector_db,
-        similarity_threshold=0.90,
-        top_k=10,
+        similarity_threshold=GROUPING_SIMILARITY_THRESHOLD,
+        top_k=GROUPING_TOP_K,
         db_path=CONFIG.get("milvus_lite_path", "./data/milvus.db"),
     )
 
 
 @router.post("/grouping/run", response_model=GroupingResultsResponse)
-async def run_grouping(
-    similarity_threshold: float = 0.90,
+def run_grouping(
+    similarity_threshold: float = GROUPING_SIMILARITY_THRESHOLD,
     clear_existing: bool = True,
 ):
     """
@@ -119,12 +120,12 @@ async def run_grouping(
         )
 
     except Exception as e:
-        logger.error(f"Error running grouping: {e}")
-        raise HTTPException(status_code=500, detail=f"Error running grouping: {str(e)}")
+        logger.error(f"Error running grouping: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error running grouping")
 
 
 @router.get("/grouping/results", response_model=GroupingResultsResponse)
-async def get_grouping_results():
+def get_grouping_results():
     """
     Get all existing product groups.
 
@@ -177,12 +178,12 @@ async def get_grouping_results():
         )
 
     except Exception as e:
-        logger.error(f"Error getting grouping results: {e}")
-        raise HTTPException(status_code=500, detail=f"Error getting results: {str(e)}")
+        logger.error(f"Error getting grouping results: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error getting results")
 
 
 @router.get("/grouping/stats", response_model=GroupingStatsResponse)
-async def get_grouping_stats():
+def get_grouping_stats():
     """
     Get statistics about product grouping.
 
@@ -223,12 +224,12 @@ async def get_grouping_stats():
         )
 
     except Exception as e:
-        logger.error(f"Error getting grouping stats: {e}")
-        raise HTTPException(status_code=500, detail=f"Error getting stats: {str(e)}")
+        logger.error(f"Error getting grouping stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error getting stats")
 
 
 @router.get("/grouping/group/{group_id}", response_model=ProductGroupResult)
-async def get_group_by_id(group_id: str):
+def get_group_by_id(group_id: PathPlainId):
     """
     Get a specific group by its UUID.
     """
@@ -271,5 +272,5 @@ async def get_group_by_id(group_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting group {group_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error getting group: {str(e)}")
+        logger.error(f"Error getting group {group_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error getting group")

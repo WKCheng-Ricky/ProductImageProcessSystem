@@ -32,6 +32,15 @@ import numpy as np
 import uvicorn
 from PIL import Image
 
+from src.logging_config import configure_logging
+from src.pipeline.config import (
+    DEFAULT_CLIP_MODEL,
+    DEFAULT_CLIP_PRETRAINED,
+    PIPELINE_SIMILARITY_THRESHOLD,
+    clip_model_from_env,
+    clip_pretrained_from_env,
+)
+from src.pipeline.identifiers import PlainId
 from src.pipeline.model_cache import get_model_cache
 from src.pipeline.product_grouper import ProductGrouper
 from src.pipeline.product_image_pipeline import ProductImagePipeline
@@ -43,11 +52,7 @@ try:
 except ImportError:
     pass
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+configure_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -60,8 +65,8 @@ def preload_models():
     cache = get_model_cache()
 
     # Get CLIP model configuration from environment
-    clip_model = os.getenv('CLIP_MODEL', 'ViT-L-14')
-    clip_pretrained = os.getenv('CLIP_PRETRAINED', 'openai')
+    clip_model = clip_model_from_env() or DEFAULT_CLIP_MODEL
+    clip_pretrained = clip_pretrained_from_env() or DEFAULT_CLIP_PRETRAINED
 
     logger.info(f"CLIP_MODEL={clip_model}, CLIP_PRETRAINED={clip_pretrained}")
 
@@ -153,7 +158,7 @@ def run_test():
     print("\n=== Test Complete Pipeline ===")
     processing_result = pipeline.process_image(
         test_path,
-        id="TEST_ID_001",
+        id=PlainId("TEST_ID_001"),
         search_similar=False,
     )
     print(f"Success: {processing_result.success}")
@@ -165,9 +170,9 @@ def run_test():
     # Use actual dimension from embedding generator
     test_dim = pipeline.embedding_generator.dimension
     test_embeddings = {
-        "ID_001": np.random.rand(test_dim),
-        "ID_002": np.random.rand(test_dim),
-        "ID_003": np.random.rand(test_dim),
+        PlainId("ID_001"): np.random.rand(test_dim),
+        PlainId("ID_002"): np.random.rand(test_dim),
+        PlainId("ID_003"): np.random.rand(test_dim),
     }
 
     print(f"Vector DB type: {type(pipeline.vector_db).__name__}")
@@ -183,7 +188,7 @@ def run_test():
     # Test 2: Search for similar products
     print("\n=== Test Similarity Search ===")
     search_results = pipeline.vector_db.search(
-        test_embeddings["ID_001"],
+        test_embeddings[PlainId("ID_001")],
         top_k=3,
         threshold=0.0
     )
@@ -193,7 +198,7 @@ def run_test():
 
     # Test 3: Retrieve specific ID
     print("\n=== Test ID Retrieval ===")
-    retrieved = pipeline.vector_db.get("ID_002")
+    retrieved = pipeline.vector_db.get(PlainId("ID_002"))
     if retrieved:
         print(f"Retrieved {retrieved.id}, embedding shape: {retrieved.embedding.shape}")
     else:
@@ -202,7 +207,7 @@ def run_test():
     # Test 4: Duplicate detection via ProductGrouper
     print("\n=== Test Duplicate Detection ===")
     grouper = ProductGrouper(pipeline.vector_db, similarity_threshold=0.95)
-    is_dup, match_id = grouper.is_duplicate(test_embeddings["ID_001"], threshold=0.95)
+    is_dup, match_id = grouper.is_duplicate(test_embeddings[PlainId("ID_001")], threshold=0.95)
     print(f"Is duplicate: {is_dup}, Match: {match_id}")
 
     # Test 5: Cleanup
@@ -253,7 +258,7 @@ def main():
     parser.add_argument(
         "--threshold",
         type=float,
-        default=0.85,
+        default=PIPELINE_SIMILARITY_THRESHOLD,
         help="Similarity threshold (default: 0.85)",
     )
     parser.add_argument(
@@ -325,7 +330,7 @@ def main():
         if args.preload_model:
             preload_models()
 
-        logger.info(f"Starting Web interface...")
+        logger.info("Starting Web interface...")
         logger.info(f"Visit: http://localhost:{args.port}")
         uvicorn.run(app, host="0.0.0.0", port=args.port, log_level="info")
 

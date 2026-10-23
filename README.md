@@ -4,7 +4,11 @@
 > **Co-Author**: Claude (Anthropic AI Assistant)
 > **Created**: 2026-01-07
 
-A complete image processing pipeline for e-commerce product images, designed for a 2M+ SKU catalog.
+[![CI](https://github.com/WKCheng-Ricky/ProductImageProcessSystem/actions/workflows/ci.yml/badge.svg)](https://github.com/WKCheng-Ricky/ProductImageProcessSystem/actions/workflows/ci.yml)
+
+A multimodal product-image pipeline (CLIP embeddings, vector search, clustering), built almost entirely with Claude Code from specs and prompts, then verified with tests and CI.
+
+Product photos are cleaned (watermarks, collages, backgrounds), scored for quality, embedded with CLIP ViT-B-32, with ViT-L-14 as an option (text and images share one embedding space), stored in a vector database, and then used for similarity search, duplicate detection and DBSCAN product grouping. It is designed for an e-commerce catalog of 2M+ SKUs.
 
 ## Features
 
@@ -13,7 +17,7 @@ A complete image processing pipeline for e-commerce product images, designed for
 - **Background Removal**: Remove backgrounds and standardize to white (rembg/U2Net)
 - **Quality Scoring**: Evaluate sharpness, brightness using LAION aesthetic predictor
 - **Best Image Selection**: Automatically select the best main image from multiple SKU photos
-- **CLIP Embeddings**: Generate vector embeddings for image search (open_clip ViT-L-14)
+- **CLIP Embeddings**: Generate vector embeddings for image search (open_clip ViT-B-32)
 - **Duplicate Detection**: Find duplicate SKUs using vector similarity
 - **Product Grouping**: Cluster similar SKUs using DBSCAN
 - **Web Interface**: Interactive multi-page UI for visualizing the processing pipeline
@@ -93,7 +97,11 @@ python main.py --image photo.jpg --output ./processed
 ```
 ProductImageProcessingSystem/
 ├── main.py                        # Main entry point (CLI + web server)
-├── requirements.txt               # Python dependencies
+├── requirements.txt               # Python dependencies (input)
+├── requirements.lock              # Pinned dependencies
+├── pyproject.toml                 # pytest and ruff config
+├── tests/                         # pytest suite
+├── .github/workflows/ci.yml       # CI
 ├── docker-compose.yml             # Docker setup
 ├── Dockerfile
 ├── scripts/
@@ -134,48 +142,18 @@ ProductImageProcessingSystem/
 
 ## Pipeline Flow
 
-```
-Input Image
-     │
-     ▼
-┌─────────────┐
-│  Watermark  │──► Remove overlays & text
-│  Removal    │
-└─────────────┘
-     │
-     ▼
-┌─────────────┐
-│  Collage    │──► Split into multiple images
-│  Detection  │
-└─────────────┘
-     │
-     ▼
-┌─────────────┐
-│  Best Image │──► Select highest quality from splits
-│  Selection  │
-└─────────────┘
-     │
-     ▼
-┌─────────────┐
-│  Preprocess │──► Remove background, crop, clean
-└─────────────┘
-     │
-     ▼
-┌─────────────┐
-│  Quality    │──► Score with LAION aesthetic predictor
-│  Scoring    │
-└─────────────┘
-     │
-     ▼
-┌─────────────┐
-│  Embedding  │──► Generate CLIP vector (ViT-L-14)
-└─────────────┘
-     │
-     ▼
-┌─────────────┐
-│  Search/    │──► Find similar, detect duplicates, group SKUs
-│  Grouping   │
-└─────────────┘
+Images are cleaned **before** embedding: backgrounds, watermarks and text overlays distort embeddings, so cleaning first keeps the vectors about the product itself.
+
+```mermaid
+flowchart TD
+    A[Input image] --> B[Watermark removal]
+    B --> C[Collage detection and split]
+    C --> D[Best image selection]
+    D --> E[Background removal and crop]
+    E --> F[Quality scoring: basic + LAION aesthetic]
+    F --> G[CLIP embedding ViT-B-32]
+    G --> H[(Vector DB: in-memory or Milvus Lite)]
+    H --> I[Search, duplicate detection, DBSCAN grouping]
 ```
 
 ## Configuration
@@ -186,7 +164,7 @@ Environment variables (via `.env` or shell):
 USE_MILVUS=true                      # Enable persistent vector DB (default: false)
 MILVUS_LITE_PATH=./data/milvus.db
 MILVUS_COLLECTION=product_embeddings
-CLIP_MODEL=ViT-L-14                  # CLIP model variant
+CLIP_MODEL=ViT-B-32                  # CLIP model variant (default: ViT-B-32; ViT-L-14 optional)
 CLIP_PRETRAINED=openai               # Pretrained weights
 ```
 
@@ -207,8 +185,41 @@ pipeline = ProductImagePipeline(
 | Similarity | Action |
 |------------|--------|
 | > 90% | Auto-match (same product) |
-| 80–90% | Similar product (variant/related) |
-| < 80% | Different product |
+| 70–90% | Similar product (variant/related) |
+| < 70% | Different product |
+
+## Testing and CI
+
+```bash
+pip install -r requirements-dev.txt   # pytest, httpx, ruff
+pytest                                 # fast suite, no model downloads
+pytest -m model                        # opt-in tests that load real model weights
+ruff check .
+```
+
+The default suite covers session handling, the in-memory vector DB, clustering, the OpenCV quality scorer, API schemas and the FastAPI routes. Heavy ML libraries are stubbed when they are not installed (`tests/conftest.py`), so it runs in seconds. GitHub Actions (`.github/workflows/ci.yml`) runs `ruff` and `pytest` on every push and pull request, and builds the Docker image without pushing it.
+
+Health endpoints: `GET /health` (liveness) and `GET /ready` (session storage and vector DB; never loads models).
+
+## Docker
+
+```bash
+docker compose up --build            # web UI on http://localhost:8001
+```
+
+The image is multi-stage, runs as a non-root user, and installs from the pinned `requirements.lock`. To change dependencies, edit `requirements.txt` and regenerate the lock:
+
+```bash
+uv pip compile requirements.txt -o requirements.lock --python-version 3.12 --index-strategy unsafe-best-match
+```
+
+## Built with spec-driven agentic development
+
+Most of the code was written by Claude Code. The human role was to direct and review it:
+
+- **Spec:** `CLAUDE.md` records the architecture, rules and thresholds the agent works to, including the key design decision to preprocess before embedding.
+- **Agent:** Claude Code writes, runs and iterates on the code (see the `Co-Author` headers in the source files).
+- **Guardrails:** tests and CI check the agent's output. Tests were added after the first version, so they pin current behaviour.
 
 ## API Reference
 
@@ -241,7 +252,7 @@ best_idx, best_img, scores = pipeline.select_best_from_sku(image_paths)
 | Component | Technology |
 |-----------|------------|
 | Background Removal | rembg (U2Net) |
-| Embedding Model | open_clip (ViT-L-14) |
+| Embedding Model | open_clip (ViT-B-32, ViT-L-14 optional) |
 | Quality Scoring | LAION aesthetic predictor |
 | Vector DB | InMemoryVectorDB (dev) / Milvus Lite (prod) |
 | Clustering | DBSCAN |
@@ -269,7 +280,3 @@ Use CPU mode (omit `--gpu` flag):
 ```bash
 python main.py --image photo.jpg
 ```
-
-## License
-
-Internal use.

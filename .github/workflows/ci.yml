@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      # Tests stub torch/open_clip (see tests/conftest.py), so only the light deps are installed.
+      - name: Install test dependencies
+        run: pip install numpy Pillow opencv-python-headless scikit-learn scipy fastapi httpx "jinja2<3.1.5" python-multipart python-dotenv uvicorn tqdm pytest pytest-cov ruff
+      - run: ruff check .
+      - run: pytest -q --cov=src --cov-fail-under=80
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  model-smoke:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      CLIP_MODEL: ViT-B-32
+      CLIP_PRETRAINED: openai
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache
+          key: clip-weights-${{ env.CLIP_MODEL }}-${{ env.CLIP_PRETRAINED }}
+      - name: Install dependencies
+        run: pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.lock pytest
+      - run: pytest -m model -q

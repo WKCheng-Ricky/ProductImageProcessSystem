@@ -12,9 +12,9 @@ from PIL import Image
 import io
 import logging
 from pathlib import Path
-from typing import Optional
 
 from ..models.schemas import UploadResponse, CollageInfoResponse
+from ..identifiers import QueryPlainId
 from ..services.session_manager import SessionManager
 from ..services.pipeline_service import get_pipeline
 from src.pipeline.collage_detector import CollageInfo
@@ -33,11 +33,11 @@ def get_session_manager(request: Request) -> SessionManager:
 
 
 @router.post("/upload", response_model=UploadResponse)
-async def upload_image(
+def upload_image(
     file: UploadFile = File(...),
     skip_watermark_removal: bool = False,
     skip_collage_detection: bool = False,
-    id: Optional[str] = None,
+    id: QueryPlainId = None,
     session_manager: SessionManager = Depends(get_session_manager)
 ):
     """
@@ -59,7 +59,7 @@ async def upload_image(
 
     # Read file content
     try:
-        content = await file.read()
+        content = file.file.read()
         if len(content) > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=400,
@@ -86,7 +86,7 @@ async def upload_image(
         logger.info(f"Saved original image to {original_path}")
     except Exception as e:
         logger.error(f"Error saving image: {e}")
-        raise HTTPException(status_code=500, detail=f"Error saving image: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error saving image")
 
     # Get pipeline
     pipeline = get_pipeline()
@@ -130,7 +130,7 @@ async def upload_image(
             logger.error(f"Error in collage detection: {e}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Error detecting collage: {str(e)}"
+                detail="Error detecting collage"
             )
     else:
         # Create a default "not collage" result
@@ -148,7 +148,7 @@ async def upload_image(
         "current_step": 1,
         "original_path": str(original_path),
         "original_filename": file.filename,
-        "id": id,
+        "id": id.plainId if id is not None else None,
         "watermark_skipped": watermark_skipped,
         "watermarks_removed": watermarks_removed,
         "collage_skipped": collage_skipped,
@@ -165,7 +165,7 @@ async def upload_image(
         session_manager.create_session(session_id, session_data)
     except Exception as e:
         logger.error(f"Error creating session: {e}")
-        raise HTTPException(status_code=500, detail=f"Error creating session: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error creating session")
 
     # Prepare response
     collage_response = CollageInfoResponse(
@@ -186,7 +186,7 @@ async def upload_image(
 
 
 @router.get("/session/{session_id}/collage", response_model=CollageInfoResponse)
-async def get_collage_info(
+def get_collage_info(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager)
 ):
@@ -206,4 +206,4 @@ async def get_collage_info(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Error retrieving collage info: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

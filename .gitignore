@@ -75,3 +75,6 @@ test_clip/
 test_clip_2/
 example/
 log/
+# Playwright MCP output (console logs, snapshots)
+.playwright-mcp/
+.mcp.json

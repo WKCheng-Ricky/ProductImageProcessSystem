@@ -8,9 +8,7 @@ import logging
 import threading
 from typing import Any, Dict, Optional, Tuple
 
-import torch
-
-from .clip_loader import load_clip_model
+from .clip_loader import default_device, load_clip_model
 from .rembg_loader import load_rembg_session
 
 logger = logging.getLogger(__name__)
@@ -50,7 +48,7 @@ class ModelCache:
         """
         # Determine actual device
         if device == "auto":
-            device = "cuda" if torch.cuda.is_available() else "cpu"
+            device = default_device()
 
         # Create cache key
         cache_key = f"clip:{model_name}:{pretrained}:{device}"

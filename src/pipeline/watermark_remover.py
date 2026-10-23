@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -306,32 +306,4 @@ class WatermarkRemover:
                 success=False
             )
 
-    def remove_watermark_auto(
-        self,
-        img: Image.Image
-    ) -> Image.Image:
-        """
-        Automatically detect and remove watermarks (simplified version)
-
-        Args:
-            img: Input image
-
-        Returns:
-            Processed image
-        """
-        result = self.remove_watermark(img)
-        return result.image
-
-
 # Usage example
-if __name__ == "__main__":
-    # Initialize remover
-    remover = WatermarkRemover(use_ocr=False)  # Use simple method first
-
-    # Remove watermarks
-    # img = Image.open("product_with_watermark.jpg")
-    # result = remover.remove_watermark(img)
-    # result.image.save("product_clean.jpg")
-    # print(f"Removed {result.watermarks_removed} watermarks")
-
-    print("Watermark Remover module loaded successfully.")

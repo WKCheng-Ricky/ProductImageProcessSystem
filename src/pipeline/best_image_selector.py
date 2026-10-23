@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import logging
 
 from .quality_scorer import ImageQualityScorer, QualityScore
-from .image_preprocessor import ImagePreprocessor, PreprocessingResult
+from .image_preprocessor import ImagePreprocessor
 
 logger = logging.getLogger(__name__)
 
@@ -365,33 +365,4 @@ class BestImageSelector:
 
         return best.index, best.processed_image, None
 
-    def rank_images(
-        self,
-        images: List[Image.Image]
-    ) -> List[ImageCandidate]:
-        """
-        Rank all images
-
-        Args:
-            images: List of images
-
-        Returns:
-            List of candidates sorted by score descending
-        """
-        _, _, candidates = self.select_best(images, return_all_scores=True)
-        return candidates or []
-
-
 # Usage
-if __name__ == "__main__":
-    # Initialize selector
-    selector = BestImageSelector()
-
-    # Picking the best image from image(s)
-    
-    # images = [Image.open(f"image_{i}.jpg") for i in range(5)]
-    # best_idx, best_img, all_scores = selector.select_best(images, return_all_scores=True)
-    # print(f"Best image index: {best_idx}")
-    # best_img.save("best_image.jpg")
-
-    print("Best Image Selector module loaded successfully.")

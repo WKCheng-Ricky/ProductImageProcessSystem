@@ -72,19 +72,3 @@ class AestheticScorer:
             aesthetic_overall=result['aesthetic_overall'],
         )
 
-    def score_simple(self, img: Image.Image | np.ndarray) -> float:
-        """
-        Get just the overall aesthetic score (1-10)
-
-        Args:
-            img: Input image (PIL Image or numpy array)
-
-        Returns:
-            Overall aesthetic score (1-10)
-        """
-        return self._scorer.score(img)
-
-
-if __name__ == "__main__":
-    scorer = AestheticScorer()
-    print("AestheticScorer module loaded successfully.")

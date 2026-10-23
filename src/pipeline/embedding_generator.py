@@ -11,13 +11,10 @@ Project: Product Image Processing System
 """
 
 import logging
-import os
 from dataclasses import dataclass
-from typing import List, Optional, Union
+from typing import List, Union
 
 import numpy as np
-import open_clip
-import torch
 from PIL import Image
 
 try:
@@ -26,6 +23,8 @@ except ImportError:
     tqdm = None
 
 from .model_cache import get_model_cache
+from .clip_loader import default_device, no_grad
+from .config import clip_model_from_env, clip_pretrained_from_env
 
 try:
     from dotenv import load_dotenv
@@ -70,8 +69,8 @@ class EmbeddingGenerator:
         """
         # Use environment variables if model_name not provided
         if model_name is None:
-            env_model = os.getenv('CLIP_MODEL')
-            env_pretrained = os.getenv('CLIP_PRETRAINED')
+            env_model = clip_model_from_env()
+            env_pretrained = clip_pretrained_from_env()
             if env_model and env_pretrained:
                 # Check if this combination exists in SUPPORTED_MODELS
                 for key, (arch, pretrained) in self.SUPPORTED_MODELS.items():
@@ -83,14 +82,14 @@ class EmbeddingGenerator:
                     model_name = f"{env_model}:{env_pretrained}"
             else:
                 # Fallback to default
-                model_name = 'clip-vit-large'
+                model_name = 'clip-vit-base'
 
         self.model_name = model_name
         self.normalize = normalize
 
         # Determine device
         if device == 'auto':
-            self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            self.device = default_device()
         else:
             self.device = device
 
@@ -157,7 +156,7 @@ class EmbeddingGenerator:
         image_input = self._preprocess(img).unsqueeze(0).to(self.device)
 
         # Generate embedding
-        with torch.no_grad():
+        with no_grad():
             features = self._model.encode_image(image_input)
 
         embedding = features.cpu().numpy().squeeze()
@@ -210,12 +209,14 @@ class EmbeddingGenerator:
             ]
 
             # Preprocessing - stack preprocessed images
+            import torch
+
             image_inputs = torch.stack([
                 self._preprocess(img) for img in batch_images
             ]).to(self.device)
 
             # Generate embeddings
-            with torch.no_grad():
+            with no_grad():
                 features = self._model.encode_image(image_inputs)
 
             embeddings = features.cpu().numpy()
@@ -235,19 +236,6 @@ class EmbeddingGenerator:
                 ))
 
         return results
-
-    def generate_from_path(self, image_path: str) -> EmbeddingResult:
-        """
-        Generate embedding from file path
-
-        Args:
-            image_path: Image file path
-
-        Returns:
-            EmbeddingResult
-        """
-        img = Image.open(image_path)
-        return self.generate(img)
 
     def similarity(
         self,
@@ -325,7 +313,7 @@ class TextImageEmbeddingGenerator(EmbeddingGenerator):
         text_tokens = self._tokenizer([text]).to(self.device)
 
         # Generate embedding
-        with torch.no_grad():
+        with no_grad():
             features = self._model.encode_text(text_tokens)
 
         embedding = features.cpu().numpy().squeeze()
@@ -340,26 +328,6 @@ class TextImageEmbeddingGenerator(EmbeddingGenerator):
             dimension=len(embedding),
             normalized=self.normalize,
         )
-
-    def text_image_similarity(
-        self,
-        text: str,
-        img: Image.Image
-    ) -> float:
-        """
-        Calculate similarity between text and image
-
-        Args:
-            text: Input text
-            img: Input image
-
-        Returns:
-            Similarity score
-        """
-        text_emb = self.generate_text_embedding(text)
-        img_emb = self.generate(img)
-
-        return self.similarity(text_emb, img_emb)
 
     def search_by_text(
         self,
@@ -393,7 +361,3 @@ class TextImageEmbeddingGenerator(EmbeddingGenerator):
         results = [(int(idx), float(similarities[idx])) for idx in indices]
 
         return results
-
-if __name__ == "__main__":
-    generator = EmbeddingGenerator()
-    print("Embedding Generator module loaded successfully.")

@@ -17,8 +17,8 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 from PIL import Image
 
-from .basic_quality_scorer import BasicQualityScorer, BasicQualityScore
-from .aesthetic_scorer import AestheticScorer, AestheticScore
+from .basic_quality_scorer import BasicQualityScorer
+from .aesthetic_scorer import AestheticScorer
 
 
 @dataclass
@@ -46,31 +46,6 @@ class QualityScore:
     def is_acceptable(self, min_score: float = 0.3) -> bool:
         """Determine if image meets minimum quality requirements"""
         return self.overall >= min_score
-
-    @property
-    def basic_score(self) -> BasicQualityScore:
-        """Get basic quality score component"""
-        return BasicQualityScore(
-            sharpness=self.sharpness,
-            brightness=self.brightness,
-            contrast=self.contrast,
-            resolution_score=self.resolution_score,
-            product_ratio=self.product_ratio,
-            has_watermark=self.has_watermark,
-            has_text_overlay=self.has_text_overlay,
-            overall=self.overall,
-        )
-
-    @property
-    def aesthetic_score_detail(self) -> AestheticScore:
-        """Get aesthetic score component"""
-        return AestheticScore(
-            clarity_score=self.clarity_score,
-            composition_score=self.composition_score,
-            defect_score=self.defect_score,
-            aesthetic_overall=self.aesthetic_overall,
-        )
-
 
 class ImageQualityScorer:
     """Combined image quality scorer (backward compatible facade)"""
@@ -189,47 +164,3 @@ class ImageQualityScorer:
             aesthetic_overall=aesthetic_detail.aesthetic_overall if aesthetic_detail else 0.0,
         )
 
-    def score_basic(
-        self,
-        img: Image.Image | np.ndarray,
-        product_mask: Optional[np.ndarray] = None
-    ) -> BasicQualityScore:
-        """Score using only basic CV-based metrics (fast, no ML)"""
-        return self._basic_scorer.score(img, product_mask)
-
-    def score_aesthetic(self, img: Image.Image | np.ndarray) -> Optional[AestheticScore]:
-        """Score using only aesthetic CLIP-based metrics"""
-        if self._aesthetic_scorer:
-            return self._aesthetic_scorer.score(img)
-        return None
-
-    def filter_acceptable(
-        self,
-        images: list[Image.Image | np.ndarray],
-        min_score: float = 0.3
-    ) -> list[tuple[int, QualityScore]]:
-        """
-        Filter images that meet quality standards
-
-        Args:
-            images: Image list
-            min_score: Minimum score threshold
-
-        Returns:
-            List of (index, score) tuples, sorted by score descending
-        """
-        results = []
-
-        for i, img in enumerate(images):
-            score = self.score(img)
-            if score.is_acceptable(min_score):
-                results.append((i, score))
-
-        results.sort(key=lambda x: x[1].overall, reverse=True)
-
-        return results
-
-
-if __name__ == "__main__":
-    scorer = ImageQualityScorer()
-    print("ImageQualityScorer module loaded successfully.")

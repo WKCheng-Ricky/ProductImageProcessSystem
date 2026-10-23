@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Tuple, Dict, Any
-from datetime import datetime
+
+from src.pipeline.identifiers import PlainId
 
 
 class CollageInfoResponse(BaseModel):
@@ -93,16 +94,16 @@ class EmbeddingResultResponse(BaseModel):
     dimension: int
     normalized: bool
     generation_time: float
-    id: Optional[str] = None
+    id: Optional[PlainId] = None
     saved_to_db: bool = False
     is_duplicate: bool = False
-    duplicate_of: Optional[str] = None
+    duplicate_of: Optional[PlainId] = None
     duplicate_score: Optional[float] = None
 
 
 class SearchResultItem(BaseModel):
     """Single search result item"""
-    id: str
+    id: PlainId
     score: float
     image_url: Optional[str] = None
     original_image_url: Optional[str] = None
@@ -131,35 +132,17 @@ class SearchResultsResponse(BaseModel):
     query_image_url: str
 
 
-class SessionStatusResponse(BaseModel):
-    """Session status information"""
-    session_id: str
-    current_step: int
-    created_at: datetime
-    updated_at: datetime
-    steps_completed: List[str] = []
-    watermark_skipped: bool = False
-    collage_skipped: bool = False
-
-
-class ErrorResponse(BaseModel):
-    """Error response"""
-    error: str
-    detail: Optional[str] = None
-    session_id: Optional[str] = None
-
-
 class BatchImageResult(BaseModel):
     """Result for a single image in batch processing"""
     filename: str
-    id: str
+    id: PlainId
     success: bool
     error: Optional[str] = None
     overall_score: Optional[float] = None
     aesthetic_score: Optional[float] = None
     saved_to_db: bool = False
     is_duplicate: bool = False
-    duplicate_of: Optional[str] = None
+    duplicate_of: Optional[PlainId] = None
     duplicate_score: Optional[float] = None
     image_url: Optional[str] = None
     original_image_url: Optional[str] = None
@@ -184,7 +167,7 @@ class BatchProcessResponse(BaseModel):
 
 class GroupMemberItem(BaseModel):
     """Single product in a group"""
-    id: str
+    id: PlainId
     image_url: Optional[str] = None
     original_image_url: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
@@ -192,9 +175,9 @@ class GroupMemberItem(BaseModel):
 
 class ProductGroupResult(BaseModel):
     """Product group with members"""
-    group_id: str
+    group_id: PlainId
     member_count: int
-    representative_id: Optional[str] = None
+    representative_id: Optional[PlainId] = None
     members: List[GroupMemberItem] = []
 
 
@@ -229,3 +212,18 @@ class TextSearchResultsResponse(BaseModel):
     results: List[SearchResultItem]
     total_count: int
     query_text: str
+
+
+class BrowseImageItem(BaseModel):
+    """A stored image offered on the Browse & Search page"""
+    id: PlainId
+    image_url: str
+    original_image_url: Optional[str] = None
+
+
+class RandomImagesResponse(BaseModel):
+    """Images sampled for the Browse & Search page"""
+    images: List[BrowseImageItem]
+    mode: str
+    total_in_db: int
+    ungrouped_count: Optional[int] = None

@@ -52,7 +52,6 @@ class CollageDetector:
             min_product_area_ratio: Minimum product area ratio
         """
         self.min_split_size = min_split_size
-        self.line_threshold = line_detection_threshold
         self.min_area_ratio = min_product_area_ratio
 
     def _to_cv2(self, img: Image.Image) -> np.ndarray:
@@ -76,15 +75,6 @@ class CollageDetector:
         """
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         height, width = gray.shape
-
-        # Calculate pixel intensity changes for rows and columns
-        row_diff = np.abs(np.diff(gray.astype(float), axis=0)).mean(axis=1)
-        col_diff = np.abs(np.diff(gray.astype(float), axis=1)).mean(axis=0)
-
-        # Smooth
-        kernel_size = 5
-        row_diff_smooth = np.convolve(row_diff, np.ones(kernel_size)/kernel_size, mode='same')
-        col_diff_smooth = np.convolve(col_diff, np.ones(kernel_size)/kernel_size, mode='same')
 
         # Find peaks (Low variance regions may be separator lines)
         # or Separator line edges
@@ -143,7 +133,7 @@ class CollageDetector:
 
         # Filter lines too close to edges
         margin = size * 0.1
-        lines = [l for l in lines if margin < l < size - margin]
+        lines = [pos for pos in lines if margin < pos < size - margin]
 
         return lines
 
@@ -522,20 +512,3 @@ class CollageDetector:
 
 
 # Usage example
-if __name__ == "__main__":
-    # Initialize detector
-    detector = CollageDetector()
-
-    # Detect collage
-    # img = Image.open("collage_image.jpg")
-    # info = detector.is_collage(img)
-    # print(f"Is collage: {info.is_collage}")
-    # print(f"Num images: {info.num_images}")
-    # print(f"Layout: {info.layout}")
-
-    # Split collage
-    # result = detector.smart_split(img)
-    # for i, split_img in enumerate(result.images):
-    #     split_img.save(f"split_{i}.jpg")
-
-    print("Collage Detector module loaded successfully.")
