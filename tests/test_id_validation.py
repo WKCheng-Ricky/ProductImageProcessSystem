@@ -84,7 +84,7 @@ def test_search_by_image_accepts_a_plain_id(client, good_id):
 
 
 @pytest.mark.parametrize("good_id", GOOD_IDS)
-def test_group_lookup_accepts_a_plain_id(client, good_id):
+def test_group_lookup_accepts_a_plain_id(client, milvus_client, good_id):
     assert client.get(f"/api/grouping/group/{encoded(good_id)}").status_code == 404
 
 
