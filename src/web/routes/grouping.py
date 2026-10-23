@@ -16,6 +16,7 @@ from ..models.schemas import (
     GroupingStatsResponse,
     GroupingResultsResponse,
 )
+from ..identifiers import PathPlainId
 from ..services.pipeline_service import get_pipeline
 from src.pipeline.milvus_db import ProductGroupManager, ProductGroupsDB
 from src.pipeline.config import CONFIG
@@ -228,7 +229,7 @@ def get_grouping_stats():
 
 
 @router.get("/grouping/group/{group_id}", response_model=ProductGroupResult)
-def get_group_by_id(group_id: str):
+def get_group_by_id(group_id: PathPlainId):
     """
     Get a specific group by its UUID.
     """

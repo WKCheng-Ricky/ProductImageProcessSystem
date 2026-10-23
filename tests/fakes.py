@@ -94,14 +94,16 @@ class InMemoryMilvusClient:
         for row in data:
             rows[row.get("id", row.get("group_id"))] = dict(row)
 
-    def delete(self, collection_name, filter):
-        self.collections[collection_name]["rows"].pop(_quoted_value(filter), None)
+    def delete(self, collection_name, ids):
+        rows = self.collections[collection_name]["rows"]
+        for key in ids:
+            rows.pop(key, None)
 
-    def query(self, collection_name, filter, output_fields, limit=16000, offset=0):
-        rows = list(self.collections[collection_name]["rows"].values())
+    def query(self, collection_name, output_fields, filter="", ids=None, limit=16000, offset=0):
         if filter:
-            wanted = _quoted_value(filter)
-            rows = [row for row in rows if wanted in (row.get("id"), row.get("group_id"))]
+            raise ValueError(f"filters are not built from values any more, use ids=: {filter}")
+        stored = self.collections[collection_name]["rows"]
+        rows = [stored[key] for key in ids if key in stored] if ids is not None else list(stored.values())
         return [{field: row[field] for field in output_fields} for row in rows[offset:offset + limit]]
 
     def search(self, collection_name, data, limit, output_fields):
@@ -118,10 +120,6 @@ class InMemoryMilvusClient:
 
     def get_collection_stats(self, collection_name):
         return {"row_count": len(self.collections[collection_name]["rows"])}
-
-
-def _quoted_value(filter_expression: str) -> str:
-    return filter_expression.split('"')[1]
 
 
 

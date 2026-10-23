@@ -1,6 +1,8 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Tuple, Dict, Any
 
+from src.pipeline.identifiers import PlainId
+
 
 class CollageInfoResponse(BaseModel):
     is_collage: bool
@@ -92,16 +94,16 @@ class EmbeddingResultResponse(BaseModel):
     dimension: int
     normalized: bool
     generation_time: float
-    id: Optional[str] = None
+    id: Optional[PlainId] = None
     saved_to_db: bool = False
     is_duplicate: bool = False
-    duplicate_of: Optional[str] = None
+    duplicate_of: Optional[PlainId] = None
     duplicate_score: Optional[float] = None
 
 
 class SearchResultItem(BaseModel):
     """Single search result item"""
-    id: str
+    id: PlainId
     score: float
     image_url: Optional[str] = None
     original_image_url: Optional[str] = None
@@ -133,14 +135,14 @@ class SearchResultsResponse(BaseModel):
 class BatchImageResult(BaseModel):
     """Result for a single image in batch processing"""
     filename: str
-    id: str
+    id: PlainId
     success: bool
     error: Optional[str] = None
     overall_score: Optional[float] = None
     aesthetic_score: Optional[float] = None
     saved_to_db: bool = False
     is_duplicate: bool = False
-    duplicate_of: Optional[str] = None
+    duplicate_of: Optional[PlainId] = None
     duplicate_score: Optional[float] = None
     image_url: Optional[str] = None
     original_image_url: Optional[str] = None
@@ -165,7 +167,7 @@ class BatchProcessResponse(BaseModel):
 
 class GroupMemberItem(BaseModel):
     """Single product in a group"""
-    id: str
+    id: PlainId
     image_url: Optional[str] = None
     original_image_url: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
@@ -173,9 +175,9 @@ class GroupMemberItem(BaseModel):
 
 class ProductGroupResult(BaseModel):
     """Product group with members"""
-    group_id: str
+    group_id: PlainId
     member_count: int
-    representative_id: Optional[str] = None
+    representative_id: Optional[PlainId] = None
     members: List[GroupMemberItem] = []
 
 
@@ -214,7 +216,7 @@ class TextSearchResultsResponse(BaseModel):
 
 class BrowseImageItem(BaseModel):
     """A stored image offered on the Browse & Search page"""
-    id: str
+    id: PlainId
     image_url: str
     original_image_url: Optional[str] = None
 

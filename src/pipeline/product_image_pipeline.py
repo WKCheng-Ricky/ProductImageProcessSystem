@@ -11,6 +11,7 @@ from .best_image_selector import BestImageSelector
 from .collage_detector import CollageDetector
 from .config import CONFIG, DEFAULT_TARGET_SIZE, PIPELINE_SIMILARITY_THRESHOLD, QUALITY_THRESHOLD
 from .embedding_generator import EmbeddingGenerator, TextImageEmbeddingGenerator
+from .identifiers import PlainId
 from .image_preprocessor import ImagePreprocessor
 # product_grouper must load before milvus_db (circular import)
 from .product_grouper import InMemoryVectorDB, ProductGrouper, SearchResult, VectorDatabase
@@ -187,9 +188,9 @@ class ProductImagePipeline:
             return []
         similar = self.product_grouper.find_similar_products(embedding, top_k=10)
         logger.info(f"Found {len(similar)} similar products")
-        return [{"id": r.id, "score": r.score} for r in similar]
+        return [{"id": r.id.plainId, "score": r.score} for r in similar]
 
-    def _store_embedding(self, id: str, embedding: np.ndarray, image_path: str, quality_score: float) -> None:
+    def _store_embedding(self, id: PlainId, embedding: np.ndarray, image_path: str, quality_score: float) -> None:
         self.vector_db.insert(
             id=id,
             embedding=embedding,
@@ -200,7 +201,7 @@ class ProductImagePipeline:
     def process_image(
         self,
         image_path: str,
-        id: Optional[str] = None,
+        id: Optional[PlainId] = None,
         save_processed: bool = True,
         search_similar: bool = True,
     ) -> ProcessingResult:
@@ -250,17 +251,21 @@ class ProductImagePipeline:
 
         except Exception as e:
             logger.error(f"Error processing image {image_path}: {e}")
-            return ProcessingResult(
-                success=False,
-                image_path=image_path,
-                processed_image_path=None,
-                quality_score=None,
-                embedding=None,
-                is_collage=False,
-                num_split_images=0,
-                similar_products=[],
-                error_message=str(e),
-            )
+            return self._failed_result(image_path, str(e))
+
+    @staticmethod
+    def _failed_result(image_path: str, error_message: str) -> ProcessingResult:
+        return ProcessingResult(
+            success=False,
+            image_path=image_path,
+            processed_image_path=None,
+            quality_score=None,
+            embedding=None,
+            is_collage=False,
+            num_split_images=0,
+            similar_products=[],
+            error_message=error_message,
+        )
 
     def process_batch(
         self,
@@ -290,8 +295,12 @@ class ProductImagePipeline:
         for i, image_path in enumerate(image_paths):
             logger.info(f"Processing {i+1}/{len(image_paths)}: {image_path}")
 
-            # Use filename as ID
-            id = image_path.stem
+            try:
+                id = PlainId(image_path.stem)
+            except ValueError as e:
+                logger.error(f"Skipping {image_path}: {e}")
+                results.append(self._failed_result(str(image_path), str(e)))
+                continue
 
             result = self.process_image(
                 str(image_path),

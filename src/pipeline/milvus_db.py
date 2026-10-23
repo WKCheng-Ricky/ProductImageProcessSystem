@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 
+from .identifiers import PlainId
 from .product_grouper import ProductGroupUUID, SearchResult, VectorDatabase
 from .config import GROUPING_SIMILARITY_THRESHOLD, GROUPING_TOP_K
 
@@ -151,12 +152,12 @@ class MilvusVectorLiteDB(VectorDatabase):
         )
         logger.info(f"Created new collection: {self.collection_name} (model: {self.model_name}, dim: {self.dimension})")
 
-    def insert(self, id: str, embedding: np.ndarray, metadata: Optional[dict] = None):
+    def insert(self, id: PlainId, embedding: np.ndarray, metadata: Optional[dict] = None):
         self._connect()
         embedding = embedding / np.linalg.norm(embedding)
         metadata_json = json.dumps(metadata) if metadata else "{}"
         data = {
-            "id": id,
+            "id": id.plainId,
             "vector": embedding.tolist(),
             "metadata_json": metadata_json,
         }
@@ -197,9 +198,9 @@ class MilvusVectorLiteDB(VectorDatabase):
         logger.info(f"Milvus search: {len(search_results)} results above threshold {threshold}")
         return search_results
 
-    def delete(self, id: str):
+    def delete(self, id: PlainId):
         self._connect()
-        self._client.delete(collection_name=self.collection_name, filter=f'id == "{id}"')
+        self._client.delete(collection_name=self.collection_name, ids=[id.plainId])
 
     def delete_all(self):
         self._connect()
@@ -207,11 +208,11 @@ class MilvusVectorLiteDB(VectorDatabase):
         self._create_collection()
         logger.info(f"Milvus: Deleted all vectors from {self.collection_name}")
 
-    def get(self, id: str) -> Optional[SearchResult]:
+    def get(self, id: PlainId) -> Optional[SearchResult]:
         self._connect()
         results = self._client.query(
             collection_name=self.collection_name,
-            filter=f'id == "{id}"',
+            ids=[id.plainId],
             output_fields=["id", "vector", "metadata_json"],
         )
 
@@ -238,7 +239,7 @@ class MilvusVectorLiteDB(VectorDatabase):
         stats = self._client.get_collection_stats(collection_name=self.collection_name)
         return stats['row_count']
 
-    def get_all_ids(self) -> List[str]:
+    def get_all_ids(self) -> List[PlainId]:
         self._connect()
         all_ids = []
         offset = 0
@@ -254,14 +255,14 @@ class MilvusVectorLiteDB(VectorDatabase):
             )
             if not results:
                 break
-            all_ids.extend([r["id"] for r in results])
+            all_ids.extend([PlainId(r["id"]) for r in results])
             if len(results) < batch_size:
                 break
             offset += batch_size
 
         return all_ids
 
-    def get_all_embeddings(self) -> Tuple[List[str], np.ndarray]:
+    def get_all_embeddings(self) -> Tuple[List[PlainId], np.ndarray]:
         self._connect()
         all_ids = []
         all_vectors = []
@@ -278,7 +279,7 @@ class MilvusVectorLiteDB(VectorDatabase):
             )
             if not results:
                 break
-            all_ids.extend([r["id"] for r in results])
+            all_ids.extend([PlainId(r["id"]) for r in results])
             all_vectors.extend([r["vector"] for r in results])
             if len(results) < batch_size:
                 break
@@ -359,20 +360,20 @@ class ProductGroupsDB:
             group.created_at = datetime.now().isoformat()
 
         data = {
-            "group_id": group.group_id,
-            "member_ids_json": json.dumps(group.member_ids),
-            "representative_id": group.representative_id or "",
+            "group_id": group.group_id.plainId,
+            "member_ids_json": json.dumps([member_id.plainId for member_id in group.member_ids]),
+            "representative_id": group.representative_id.plainId if group.representative_id else "",
             "created_at": group.created_at,
             "placeholder_vector": [0.0] * _PLACEHOLDER_VECTOR_DIM,
         }
         self._client.insert(collection_name=self.collection_name, data=[data])
         logger.info(f"Inserted group {group.group_id} with {group.size} members")
 
-    def get_group(self, group_id: str) -> Optional[ProductGroupUUID]:
+    def get_group(self, group_id: PlainId) -> Optional[ProductGroupUUID]:
         self._connect()
         results = self._client.query(
             collection_name=self.collection_name,
-            filter=f'group_id == "{group_id}"',
+            ids=[group_id.plainId],
             output_fields=["group_id", "member_ids_json", "representative_id", "created_at"],
         )
         if not results:
@@ -390,7 +391,7 @@ class ProductGroupsDB:
         self._connect()
         self._client.delete(
             collection_name=self.collection_name,
-            filter=f'group_id == "{group.group_id}"',
+            ids=[group.group_id.plainId],
         )
         self.insert_group(group)
         logger.info(f"Updated group {group.group_id}")
@@ -431,7 +432,7 @@ class ProductGroupsDB:
 
         return groups
 
-    def find_group_by_product(self, product_id: str) -> Optional[ProductGroupUUID]:
+    def find_group_by_product(self, product_id: PlainId) -> Optional[ProductGroupUUID]:
         groups = self.get_all_groups()
         for group in groups:
             if product_id in group.member_ids:
@@ -530,7 +531,7 @@ class ProductGroupManager:
 
             if len(group_members) >= 1:
                 group = ProductGroupUUID(
-                    group_id=str(uuid.uuid4()),
+                    group_id=PlainId(str(uuid.uuid4())),
                     member_ids=group_members,
                     representative_id=group_members[0],
                     created_at=datetime.now().isoformat(),
@@ -539,12 +540,12 @@ class ProductGroupManager:
                 created_groups.append(group)
 
                 if len(group_members) > 1:
-                    logger.info(f"Created group {group.group_id[:8]}... with {len(group_members)} members")
+                    logger.info(f"Created group {group.group_id.plainId[:8]}... with {len(group_members)} members")
 
         logger.info(f"Grouping complete: {len(created_groups)} groups created")
         return created_groups
 
-    def get_group(self, group_id: str) -> Optional[ProductGroupUUID]:
+    def get_group(self, group_id: PlainId) -> Optional[ProductGroupUUID]:
         return self.groups_db.get_group(group_id)
 
     def get_all_groups(self) -> List[ProductGroupUUID]:

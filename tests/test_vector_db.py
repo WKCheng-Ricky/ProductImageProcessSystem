@@ -2,14 +2,15 @@ import numpy as np
 import pytest
 
 from src.pipeline.product_grouper import InMemoryVectorDB, VectorDatabase
+from src.pipeline.identifiers import PlainId
 
 
 @pytest.fixture
 def db():
     database = InMemoryVectorDB()
-    database.insert("x", np.array([1.0, 0.0, 0.0]), {"name": "x"})
-    database.insert("xy", np.array([1.0, 1.0, 0.0]))
-    database.insert("z", np.array([0.0, 0.0, 1.0]))
+    database.insert(PlainId("x"), np.array([1.0, 0.0, 0.0]), {"name": "x"})
+    database.insert(PlainId("xy"), np.array([1.0, 1.0, 0.0]))
+    database.insert(PlainId("z"), np.array([0.0, 0.0, 1.0]))
     return database
 
 
@@ -35,16 +36,16 @@ def test_search_empty_db_returns_nothing():
 
 
 def test_inserted_vectors_are_unit_normalised(db):
-    assert np.linalg.norm(db.get("xy").embedding) == pytest.approx(1.0)
+    assert np.linalg.norm(db.get(PlainId("xy")).embedding) == pytest.approx(1.0)
 
 
 def test_get_returns_metadata_and_none_for_unknown(db):
-    assert db.get("x").metadata == {"name": "x"}
-    assert db.get("nope") is None
+    assert db.get(PlainId("x")).metadata == {"name": "x"}
+    assert db.get(PlainId("nope")) is None
 
 
 def test_delete_and_delete_all(db):
-    db.delete("x")
+    db.delete(PlainId("x"))
     assert db.size() == 2
 
     db.delete_all()
@@ -56,7 +57,7 @@ def test_get_all_ids_lists_every_inserted_id(db):
 
 
 def test_get_all_ids_drops_deleted_ids(db):
-    db.delete("xy")
+    db.delete(PlainId("xy"))
 
     assert db.get_all_ids() == ["x", "z"]
 

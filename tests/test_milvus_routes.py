@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.pipeline import milvus_db
+from src.pipeline.identifiers import ID_MAX_LENGTH, PlainId
 from src.pipeline.config import CONFIG
 from src.pipeline.milvus_db import ProductGroupsDB
 from src.pipeline.product_grouper import ProductGroupUUID, SearchResult
@@ -85,20 +86,20 @@ def test_backup_copies_a_milvus_lite_directory(tmp_path, monkeypatch):
 
 
 class StubMilvusDB:
-    def __init__(self):
-        self.rows = {"a": np.array([1.0, 0.0]), "b": np.array([0.0, 1.0])}
+    def __init__(self, rows=None):
+        self.rows = rows or {"a": np.array([1.0, 0.0]), "b": np.array([0.0, 1.0])}
 
     def size(self):
         return len(self.rows)
 
     def get_all_embeddings(self):
-        return list(self.rows), list(self.rows.values())
+        return [PlainId(stored_id) for stored_id in self.rows], list(self.rows.values())
 
     def get(self, id):
-        return SearchResult(id=id, score=1.0, embedding=self.rows[id], metadata={"image_url": f"/{id}.png"})
+        return SearchResult(id=id, score=1.0, embedding=self.rows[id.plainId], metadata={"image_url": f"/{id}.png"})
 
     def insert(self, id, embedding, metadata=None):
-        self.rows[id] = embedding
+        self.rows[id.plainId] = embedding
 
 
 @pytest.fixture
@@ -132,3 +133,20 @@ def test_duplicate_copies_every_record_and_reports_a_backup(client, tmp_path, mo
     assert response.status_code == 200, response.text
     assert (body["original_count"], body["new_count"], body["duplicates_added"]) == (2, 6, 4)
     assert (tmp_path / body["backup_path"].rsplit("/", 1)[1]).exists()
+
+
+def test_duplicating_a_record_whose_id_fills_the_limit_still_makes_valid_copies(client, tmp_path, monkeypatch):
+    database = tmp_path / "milvus.db"
+    database.mkdir()
+    monkeypatch.setitem(CONFIG, "milvus_lite_path", str(database))
+    longest_id = "x" * ID_MAX_LENGTH
+    stub = StubMilvusDB(rows={longest_id: np.array([1.0, 0.0])})
+    monkeypatch.setattr(duplicate_service, "active_milvus_db", lambda: stub)
+
+    response = client.post("/api/duplicate", json={"n": 3})
+
+    assert response.status_code == 200, response.text
+    assert response.json()["duplicates_added"] == 2
+    copies = [stored for stored in stub.rows if stored != longest_id]
+    assert len(copies) == 2
+    assert all(copy.startswith("x") and PlainId(copy) for copy in copies)

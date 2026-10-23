@@ -17,6 +17,7 @@ import numpy as np
 from src.pipeline.config import CONFIG, GROUPING_SIMILARITY_THRESHOLD
 from src.pipeline.milvus_db import MilvusVectorLiteDB, ProductGroupsDB
 from src.pipeline.product_grouper import ProductGroupUUID, VectorDatabase
+from src.pipeline.identifiers import PlainId
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +117,7 @@ class BrowseService:
         overall = metadata.get("overall")
         return overall if overall is not None else metadata.get("quality_score")
 
-    def _random_images(self, all_ids: List[str], count: int) -> List[BrowseImage]:
+    def _random_images(self, all_ids: List[PlainId], count: int) -> List[BrowseImage]:
         candidate_ids = self._rng.sample(all_ids, min(len(all_ids), CANDIDATE_MULTIPLIER * count))
         kept_images: List[BrowseImage] = []
         kept_vectors: List[np.ndarray] = []

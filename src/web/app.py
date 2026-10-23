@@ -33,6 +33,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from src.logging_config import configure_logging
 from src.pipeline.config import CONFIG
 from .routes import upload, watermark, split, preprocessing, quality, embedding, search, batch, grouping, duplicate
+from .identifiers import PathPlainId
 from .services.pipeline_service import PipelineService, get_pipeline
 from .services.session_manager import SessionManager
 
@@ -190,7 +191,7 @@ async def embedding_page(request: Request, session_id: str):
 
 
 @app.get("/search/by-image/{image_id}", response_class=HTMLResponse)
-async def search_by_image_page(request: Request, image_id: str):
+async def search_by_image_page(request: Request, image_id: PathPlainId):
     """Search similar products by image ID"""
     return templates.TemplateResponse(request, "search_by_image.html", {
         "image_id": image_id

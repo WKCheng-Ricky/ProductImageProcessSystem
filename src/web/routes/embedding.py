@@ -14,9 +14,10 @@ import time
 import logging
 import uuid
 from pathlib import Path
-from typing import Optional
 
 from ..models.schemas import EmbeddingResultResponse
+from src.pipeline.identifiers import PlainId
+from ..identifiers import QueryPlainId
 from ..services.session_manager import SessionManager
 from ..services.pipeline_service import get_pipeline
 from src.pipeline.config import DUPLICATE_SIMILARITY_THRESHOLD
@@ -32,7 +33,7 @@ def get_session_manager(request: Request) -> SessionManager:
 @router.post("/session/{session_id}/embedding", response_model=EmbeddingResultResponse)
 def generate_embedding(
     session_id: str,
-    id: Optional[str] = None,
+    id: QueryPlainId = None,
     session_manager: SessionManager = Depends(get_session_manager)
 ):
     """
@@ -51,11 +52,12 @@ def generate_embedding(
 
     # Use id from parameter, fallback to session
     if id is None:
-        id = session.get("id")
+        stored_id = session.get("id")
+        id = PlainId(stored_id) if stored_id is not None else None
 
     # if id is not provided by user
     if id is None:
-        id = str(uuid.uuid4())
+        id = PlainId(str(uuid.uuid4()))
 
     # Get preprocessed image (if available), otherwise use best available
     if "preprocessing_result" in session:
@@ -165,10 +167,10 @@ def generate_embedding(
         "normalized": embedding_result.normalized,
         "generation_time": generation_time,
         "embedding_path": str(embedding_path),
-        "id": id,
+        "id": id.plainId,
         "saved_to_db": saved_to_db,
         "is_duplicate": is_duplicate,
-        "duplicate_of": duplicate_of,
+        "duplicate_of": duplicate_of.plainId if duplicate_of is not None else None,
         "duplicate_score": duplicate_score
     }
 

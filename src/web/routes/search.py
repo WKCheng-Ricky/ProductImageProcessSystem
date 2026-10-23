@@ -22,6 +22,7 @@ from ..models.schemas import (
     TextSearchRequest,
     TextSearchResultsResponse,
 )
+from ..identifiers import PathPlainId
 from ..services.browse_service import build_browse_service
 from ..services.pipeline_service import get_pipeline
 from ..services.session_manager import SessionManager
@@ -141,7 +142,7 @@ def search_similar_products(
         "threshold": threshold,
         "results": [
             {
-                "id": item.id,
+                "id": item.id.plainId,
                 "score": item.score,
                 "confidence_level": item.confidence_level
             }
@@ -195,7 +196,7 @@ def random_images(count: int = 10):
 
 @router.get("/search/by-image/{image_id}", response_model=SearchResultsResponse)
 def search_by_image_id(
-    image_id: str,
+    image_id: PathPlainId,
     top_k: int = 10,
     threshold: float = 0.70
 ):

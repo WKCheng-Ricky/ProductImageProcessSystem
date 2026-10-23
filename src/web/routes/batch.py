@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import List
 
 from ..models.schemas import BatchUploadResponse, BatchProcessResponse, BatchImageResult
+from src.pipeline.identifiers import PlainId
 from ..services.session_manager import SessionManager
 from ..services.pipeline_service import get_pipeline
 from src.pipeline.config import DUPLICATE_SIMILARITY_THRESHOLD
@@ -146,7 +147,7 @@ def process_batch(
     })
 
     for idx, file_info in enumerate(files):
-        file_id = file_info["file_id"]
+        file_id = PlainId(file_info["file_id"])
         filename = file_info["filename"]
         image_path = Path(file_info["path"])
 

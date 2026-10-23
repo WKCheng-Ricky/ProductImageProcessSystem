@@ -4,6 +4,7 @@ import random
 import numpy as np
 import pytest
 
+from src.pipeline.identifiers import PlainId
 from src.pipeline.product_grouper import InMemoryVectorDB, ProductGroupUUID
 from src.web.services.browse_service import BrowseService
 
@@ -19,7 +20,7 @@ def one_hot(index, dimension=DIMENSION):
 def add(db, image_id, vector, with_url=True, **metadata):
     if with_url:
         metadata["image_url"] = f"/img/{image_id}.jpg"
-    db.insert(image_id, vector, metadata)
+    db.insert(PlainId(image_id), vector, metadata)
 
 
 def distinct_db(count, dimension=DIMENSION):
@@ -70,7 +71,7 @@ def test_images_without_image_url_are_never_returned():
 
     ids = {image.id for image in service(db).sample(10).images}
 
-    assert ids and all(image_id.startswith("with") for image_id in ids)
+    assert ids and all(str(image_id).startswith("with") for image_id in ids)
 
 
 def test_a_db_where_no_record_has_a_url_gives_no_images_but_a_total():

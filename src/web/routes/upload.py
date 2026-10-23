@@ -12,9 +12,9 @@ from PIL import Image
 import io
 import logging
 from pathlib import Path
-from typing import Optional
 
 from ..models.schemas import UploadResponse, CollageInfoResponse
+from ..identifiers import QueryPlainId
 from ..services.session_manager import SessionManager
 from ..services.pipeline_service import get_pipeline
 from src.pipeline.collage_detector import CollageInfo
@@ -37,7 +37,7 @@ def upload_image(
     file: UploadFile = File(...),
     skip_watermark_removal: bool = False,
     skip_collage_detection: bool = False,
-    id: Optional[str] = None,
+    id: QueryPlainId = None,
     session_manager: SessionManager = Depends(get_session_manager)
 ):
     """
@@ -148,7 +148,7 @@ def upload_image(
         "current_step": 1,
         "original_path": str(original_path),
         "original_filename": file.filename,
-        "id": id,
+        "id": id.plainId if id is not None else None,
         "watermark_skipped": watermark_skipped,
         "watermarks_removed": watermarks_removed,
         "collage_skipped": collage_skipped,

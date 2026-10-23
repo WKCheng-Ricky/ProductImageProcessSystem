@@ -40,6 +40,7 @@ from src.pipeline.config import (
     clip_model_from_env,
     clip_pretrained_from_env,
 )
+from src.pipeline.identifiers import PlainId
 from src.pipeline.model_cache import get_model_cache
 from src.pipeline.product_grouper import ProductGrouper
 from src.pipeline.product_image_pipeline import ProductImagePipeline
@@ -157,7 +158,7 @@ def run_test():
     print("\n=== Test Complete Pipeline ===")
     processing_result = pipeline.process_image(
         test_path,
-        id="TEST_ID_001",
+        id=PlainId("TEST_ID_001"),
         search_similar=False,
     )
     print(f"Success: {processing_result.success}")
@@ -169,9 +170,9 @@ def run_test():
     # Use actual dimension from embedding generator
     test_dim = pipeline.embedding_generator.dimension
     test_embeddings = {
-        "ID_001": np.random.rand(test_dim),
-        "ID_002": np.random.rand(test_dim),
-        "ID_003": np.random.rand(test_dim),
+        PlainId("ID_001"): np.random.rand(test_dim),
+        PlainId("ID_002"): np.random.rand(test_dim),
+        PlainId("ID_003"): np.random.rand(test_dim),
     }
 
     print(f"Vector DB type: {type(pipeline.vector_db).__name__}")
@@ -187,7 +188,7 @@ def run_test():
     # Test 2: Search for similar products
     print("\n=== Test Similarity Search ===")
     search_results = pipeline.vector_db.search(
-        test_embeddings["ID_001"],
+        test_embeddings[PlainId("ID_001")],
         top_k=3,
         threshold=0.0
     )
@@ -197,7 +198,7 @@ def run_test():
 
     # Test 3: Retrieve specific ID
     print("\n=== Test ID Retrieval ===")
-    retrieved = pipeline.vector_db.get("ID_002")
+    retrieved = pipeline.vector_db.get(PlainId("ID_002"))
     if retrieved:
         print(f"Retrieved {retrieved.id}, embedding shape: {retrieved.embedding.shape}")
     else:
@@ -206,7 +207,7 @@ def run_test():
     # Test 4: Duplicate detection via ProductGrouper
     print("\n=== Test Duplicate Detection ===")
     grouper = ProductGrouper(pipeline.vector_db, similarity_threshold=0.95)
-    is_dup, match_id = grouper.is_duplicate(test_embeddings["ID_001"], threshold=0.95)
+    is_dup, match_id = grouper.is_duplicate(test_embeddings[PlainId("ID_001")], threshold=0.95)
     print(f"Is duplicate: {is_dup}, Match: {match_id}")
 
     # Test 5: Cleanup

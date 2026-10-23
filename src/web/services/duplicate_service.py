@@ -18,6 +18,7 @@ from src.pipeline.config import CONFIG
 from src.pipeline.milvus_db import MilvusVectorLiteDB
 
 from .pipeline_service import get_pipeline
+from src.pipeline.identifiers import ID_MAX_LENGTH, PlainId
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,12 @@ def backup_database() -> str:
     return backup_path
 
 
+def _copy_id(original_id: PlainId, copy_num: int) -> PlainId:
+    """The original id plus a unique suffix; the original part is cut so the copy still fits the id limit."""
+    suffix = f"_dup{copy_num}_{uuid.uuid4().hex[:8]}"
+    return PlainId(original_id.plainId[:ID_MAX_LENGTH - len(suffix)] + suffix)
+
+
 def duplicate_records(n: int) -> Dict[str, Any]:
     """
     Duplicate all existing records in Milvus database to n copies.
@@ -101,10 +108,10 @@ def duplicate_records(n: int) -> Dict[str, Any]:
     duplicates_added = 0
     for copy_num in range(1, n):
         for i, (orig_id, vector, metadata) in enumerate(zip(all_ids, all_vectors, all_metadata)):
-            new_id = f"{orig_id}_dup{copy_num}_{uuid.uuid4().hex[:8]}"
+            new_id = _copy_id(orig_id, copy_num)
 
             new_metadata = metadata.copy() if metadata else {}
-            new_metadata["original_id"] = orig_id
+            new_metadata["original_id"] = orig_id.plainId
             new_metadata["duplicate_number"] = copy_num
 
             vector_db.insert(new_id, np.array(vector), new_metadata)
