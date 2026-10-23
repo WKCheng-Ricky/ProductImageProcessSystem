@@ -127,10 +127,11 @@
 
     function showGroupingHint(data) {
         let message = null;
-        if (data.mode === 'random') {
+        if (data.mode === 'random' && data.ungrouped_count > 0) {
+            const subject = data.ungrouped_count === 1 ? "1 image isn't" : `${data.ungrouped_count} images aren't`;
+            message = `${subject} in any group yet, so this is a random sample. Re-run grouping to get one image per product group.`;
+        } else if (data.mode === 'random') {
             message = 'Showing a random sample. Group your products for a better selection.';
-        } else if (data.ungrouped_count > 0) {
-            message = `${data.ungrouped_count} images aren't grouped yet.`;
         }
         if (message) {
             document.getElementById('grouping-hint-text').textContent = message;

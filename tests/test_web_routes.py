@@ -15,6 +15,7 @@ UNKNOWN_SESSION = "22222222-2222-4222-8222-222222222222"
 RED = (200, 30, 30)
 RED_SHADE = (170, 50, 50)  # cosine 0.99 to RED with the fake embedder: similar, but not a duplicate
 BLUE = (30, 30, 200)
+GREEN = (30, 200, 30)
 
 
 @pytest.fixture
@@ -337,6 +338,7 @@ def test_browse_page_renders_and_is_not_taken_for_a_session(client):
 
     assert response.status_code == 200
     assert "/api/search/random" in response.text
+    assert "in any group yet, so this is a random sample" in response.text
 
 
 def test_home_page_links_to_browse(client):
@@ -362,3 +364,18 @@ def test_browse_does_not_create_the_groups_collection(milvus_pipeline, client, m
 
     assert body["mode"] == "random" and len(body["images"]) == 1
     assert "product_groups" not in milvus_client.collections
+
+
+def test_browse_stops_using_groups_once_a_new_image_is_added(milvus_pipeline, client):
+    run_through_embedding(client, RED, "red")
+    run_through_embedding(client, RED_SHADE, "red-shade")
+    run_through_embedding(client, BLUE, "blue")
+    client.post("/api/grouping/run", params={"similarity_threshold": 0.95})
+    before = client.get("/api/search/random").json()
+
+    run_through_embedding(client, GREEN, "green")
+    after = client.get("/api/search/random").json()
+
+    assert before["mode"] == "grouped" and before["ungrouped_count"] == 0
+    assert after["mode"] == "random" and after["ungrouped_count"] == 1
+    assert "green" in {image["id"] for image in after["images"]}

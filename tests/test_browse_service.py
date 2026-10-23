@@ -201,13 +201,24 @@ def test_more_groups_than_count_returns_exactly_count():
     assert len(service(db, groups=groups).sample(5).images) == 5
 
 
-def test_ungrouped_count_is_images_not_in_any_live_group():
+def test_groups_that_miss_some_images_are_stale_so_sampling_is_random():
     db = distinct_db(5)
 
     sample = service(db, groups=[group("g", ["img0", "img1", "img2", "gone"])]).sample(10)
 
+    assert sample.mode == "random"
     assert sample.total_in_db == 5
     assert sample.ungrouped_count == 2
+    assert {image.id for image in sample.images} == {f"img{i}" for i in range(5)}
+
+
+def test_groups_covering_every_image_report_nothing_ungrouped():
+    db = distinct_db(4)
+
+    sample = service(db, groups=[group("g1", ["img0", "img1"]), group("g2", ["img2", "img3"])]).sample(10)
+
+    assert sample.mode == "grouped"
+    assert sample.ungrouped_count == 0
 
 
 def test_all_groups_dead_falls_back_to_random_mode():

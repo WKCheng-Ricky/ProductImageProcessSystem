@@ -53,19 +53,22 @@ class BrowseService:
         all_ids = self._vector_db.get_all_ids()
         total_in_db = self._vector_db.size()
         live_groups = self._live_groups(set(all_ids))
+        ungrouped_count = None
         if live_groups:
             covered_ids = {member_id for group in live_groups for member_id in group.member_ids}
-            return BrowseSample(
-                images=self._best_image_per_group(live_groups, count),
-                mode="grouped",
-                total_in_db=total_in_db,
-                ungrouped_count=total_in_db - len(covered_ids),
-            )
+            ungrouped_count = len(set(all_ids) - covered_ids)
+            if ungrouped_count == 0:
+                return BrowseSample(
+                    images=self._best_image_per_group(live_groups, count),
+                    mode="grouped",
+                    total_in_db=total_in_db,
+                    ungrouped_count=0,
+                )
         return BrowseSample(
             images=self._random_images(all_ids, count),
             mode="random",
             total_in_db=total_in_db,
-            ungrouped_count=None,
+            ungrouped_count=ungrouped_count,
         )
 
     def _live_groups(self, live_ids: set) -> List[ProductGroupUUID]:

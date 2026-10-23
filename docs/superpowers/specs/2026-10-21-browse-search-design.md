@@ -53,7 +53,10 @@ near-duplicates of the same product.
 1. Read the groups through an injected `list_groups` callable. The route wires it to
    `ProductGroupsDB.get_all_groups_if_present` only when the vector DB is `MilvusVectorLiteDB`, and to
    a function returning `[]` otherwise. If there are no groups, or `list_groups` raises
-   (logged as a warning), use the random path (step 3). Otherwise use the grouped path (step 2).
+   (logged as a warning), use the random path (step 3). If the groups do not cover every
+   stored image (some image is in no live group, because images were added after grouping
+   ran), the groups are stale: use the random path and report how many images are
+   ungrouped. Otherwise use the grouped path (step 2).
 2. **Grouped path**
    - Remove member IDs that are no longer in the vector DB. Remove groups left empty.
    - Shuffle the groups and take `count` of them. If there are fewer, take all.
@@ -75,16 +78,18 @@ near-duplicates of the same product.
 | Field | Meaning |
 |-------|---------|
 | `images` | list of `{id, image_url, original_image_url}` |
-| `mode` | `"grouped"` or `"random"` |
+| `mode` | `"grouped"` only when live groups cover every stored image, otherwise `"random"` |
 | `total_in_db` | `vector_db.size()` |
-| `ungrouped_count` | `total_in_db` minus the number of IDs covered by live groups. `null` in random mode |
+| `ungrouped_count` | number of stored images that are in no live group. `null` when there are no live groups at all; `0` in grouped mode; greater than `0` when the groups are stale |
 
 ### Grouping hint on the page
 
-- `mode == "random"`: "Showing a random sample. Group your products for a better
-  selection." plus a button to `/grouping`.
-- `mode == "grouped"` and `ungrouped_count > 0`: "N images aren't grouped yet." plus
-  the same button.
+- `mode == "random"` and `ungrouped_count` is `null`: "Showing a random sample. Group your
+  products for a better selection." plus a button to `/grouping`.
+- `mode == "random"` and `ungrouped_count > 0`: "N images aren't in any group yet, so this is
+  a random sample. Re-run grouping to get one image per product group." ("1 image isn't" when
+  N is 1) plus the same button.
+- `mode == "grouped"`: no hint.
 - Empty DB: no hint. Show "No images yet" with a link to `/batch/upload`.
 
 ## 6. Errors and edge cases
@@ -146,3 +151,8 @@ Two problems were found after the feature was implemented. Both are rules the or
 - **Not changed:** the Milvus Lite `Method not implemented!` (`AllocTimestamp`) line logged at `ERROR` when any collection is created or dropped is server noise that predates this feature, and is out of scope.
 
 Tests: in-memory grouping with stored products still returns 500; a first Browse request on Milvus creates no `product_groups` collection; `get_all_groups_if_present` returns `[]` without creating the collection and returns stored groups once they exist.
+
+### Amendment 2 (2026-10-23, second human review)
+
+- **A3. Stale groups are not used.** The original rule showed the best image of each group even when images had been added after grouping, with a banner saying how many were ungrouped. That is misleading: the page looks like a view of the whole database while hiding every new image. Groups are used only while they cover every stored image; otherwise Browse samples at random and says why (see section 5). Tests: groups covering only some images give `mode == "random"`, a positive `ungrouped_count` and images that include the ungrouped ones; adding an image after grouping flips a grouped Browse response to random.
+- **A4. Milvus Lite error log.** `create_collection(index_params=...)` waits for the index through the `AllocTimestamp` call, which Milvus Lite's server does not implement, so every collection create (including the drop and recreate when grouping is re-run) logged `Exception calling application: Method not implemented!` at ERROR although the call succeeded. Collections are now created, indexed without waiting (`create_index(..., sync=False)`) and loaded. Tests: no collection is created through the waiting path, and clearing groups recreates the collection the same way.
