@@ -153,5 +153,5 @@ def build_browse_service(pipeline) -> BrowseService:
     vector_db = pipeline.vector_db
     if isinstance(vector_db, MilvusVectorLiteDB):
         groups_db = ProductGroupsDB(db_path=CONFIG.get("milvus_lite_path", "./data/milvus.db"))
-        return BrowseService(vector_db, list_groups=groups_db.get_all_groups)
+        return BrowseService(vector_db, list_groups=groups_db.get_all_groups_if_present)
     return BrowseService(vector_db, list_groups=list)

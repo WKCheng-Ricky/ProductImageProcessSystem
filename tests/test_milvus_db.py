@@ -156,3 +156,14 @@ def test_grouping_an_empty_database_creates_nothing(vector_db, groups_db):
     assert manager.group_all_products() == []
 
 
+
+
+def test_reading_groups_that_were_never_created_returns_nothing_and_creates_nothing(groups_db, milvus_client):
+    assert groups_db.get_all_groups_if_present() == []
+    assert "product_groups" not in milvus_client.collections
+
+
+def test_reading_existing_groups_returns_them(groups_db):
+    groups_db.insert_group(ProductGroupUUID(group_id="g1", member_ids=["a", "b"], representative_id="a"))
+
+    assert [g.group_id for g in groups_db.get_all_groups_if_present()] == ["g1"]

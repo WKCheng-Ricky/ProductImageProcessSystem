@@ -345,3 +345,20 @@ def test_home_page_links_to_browse(client):
 
 def test_by_image_page_links_back_to_browse(client):
     assert 'href="/search/browse"' in client.get("/search/by-image/red").text
+
+
+def test_grouping_still_requires_the_milvus_vector_db(client, milvus_client):
+    run_through_embedding(client, RED, "red")
+
+    response = client.post("/api/grouping/run")
+
+    assert response.status_code == 500
+
+
+def test_browse_does_not_create_the_groups_collection(milvus_pipeline, client, milvus_client):
+    run_through_embedding(client, RED, "red")
+
+    body = client.get("/api/search/random").json()
+
+    assert body["mode"] == "random" and len(body["images"]) == 1
+    assert "product_groups" not in milvus_client.collections

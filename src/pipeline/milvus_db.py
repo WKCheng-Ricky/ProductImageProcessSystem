@@ -303,8 +303,9 @@ class ProductGroupsDB:
         self.collection_name = collection_name
         self.db_path = db_path
         self._client = None
+        self._collection_ready = False
 
-    def _connect(self):
+    def _open_client(self):
         if self._client is not None:
             return
 
@@ -315,6 +316,12 @@ class ProductGroupsDB:
         self._client = MilvusClient(self.db_path)
         logger.info(f"ProductGroupsDB connected to: {self.db_path}")
 
+    def _connect(self):
+        if self._collection_ready:
+            return
+
+        self._open_client()
+
         collections = self._client.list_collections()
         if self.collection_name not in collections:
             self._create_collection()
@@ -322,6 +329,7 @@ class ProductGroupsDB:
             logger.info(f"Using existing groups collection: {self.collection_name}")
 
         self._client.load_collection(self.collection_name)
+        self._collection_ready = True
 
     def _create_collection(self):
         schema = self._client.create_schema(auto_id=False, enable_dynamic_field=False)
@@ -383,6 +391,13 @@ class ProductGroupsDB:
         )
         self.insert_group(group)
         logger.info(f"Updated group {group.group_id}")
+
+    def get_all_groups_if_present(self) -> List[ProductGroupUUID]:
+        """Read groups without creating the collection when grouping has never run."""
+        self._open_client()
+        if self.collection_name not in self._client.list_collections():
+            return []
+        return self.get_all_groups()
 
     def get_all_groups(self) -> List[ProductGroupUUID]:
         self._connect()
@@ -473,8 +488,8 @@ class ProductGroupManager:
         if clear_existing:
             self.groups_db.clear_all_groups()
 
-        if not hasattr(self.vector_db, 'get_all_ids'):
-            raise ValueError("Vector database must support get_all_ids() method")
+        if not isinstance(self.vector_db, MilvusVectorLiteDB):
+            raise ValueError("Product grouping requires the Milvus vector database")
 
         all_ids = self.vector_db.get_all_ids()
         if not all_ids:

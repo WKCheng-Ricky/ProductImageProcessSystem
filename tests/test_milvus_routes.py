@@ -48,6 +48,7 @@ def groups_db(monkeypatch):
     monkeypatch.setattr(milvus_db, "DataType", SimpleNamespace(VARCHAR="VARCHAR", FLOAT_VECTOR="FLOAT_VECTOR"))
     db = ProductGroupsDB(db_path="unused.db")
     db._client = RecordingMilvusClient()
+    db._collection_ready = True
     return db
 
 

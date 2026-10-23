@@ -51,7 +51,7 @@ near-duplicates of the same product.
 ## 5. Sampling rules (`BrowseService.sample(count)`)
 
 1. Read the groups through an injected `list_groups` callable. The route wires it to
-   `ProductGroupsDB.get_all_groups` only when the vector DB is `MilvusVectorLiteDB`, and to
+   `ProductGroupsDB.get_all_groups_if_present` only when the vector DB is `MilvusVectorLiteDB`, and to
    a function returning `[]` otherwise. If there are no groups, or `list_groups` raises
    (logged as a warning), use the random path (step 3). Otherwise use the grouped path (step 2).
 2. **Grouped path**
@@ -136,3 +136,13 @@ running the app. The repo has no browser tests.
 - "Best image in a group" means highest `overall` (else `quality_score`), with fallbacks,
   because grouping does not record a best image.
 - A 0.90 similarity cutoff for the random path reuses the existing "same product" band.
+
+## 9. Amendment (2026-10-23, found in human review)
+
+Two problems were found after the feature was implemented. Both are rules the original spec should have stated.
+
+- **A1. Existing features keep their behaviour.** Adding `get_all_ids()` to `InMemoryVectorDB` made the `hasattr(..., 'get_all_ids')` guard in `ProductGroupManager.group_all_products` pass for the in-memory DB. Before this branch, grouping with an in-memory vector DB and stored products failed (`POST /api/grouping/run` returned 500 `"Error running grouping"`); on this branch it succeeded and wrote groups into the Milvus file, leaving groups that point at vectors that vanish on restart. Grouping must keep requiring the persistent `MilvusVectorLiteDB`: the guard becomes an explicit `isinstance` check that raises `ValueError("Product grouping requires the Milvus vector database")`.
+- **A2. Read paths must not write.** The first Browse request created an empty `product_groups` collection, because `ProductGroupsDB` creates its collection on connect. Browse now reads groups through `ProductGroupsDB.get_all_groups_if_present()`, which returns `[]` and creates nothing when grouping has never run. Other existing pages that create the collection on read (for example grouping stats) are unchanged.
+- **Not changed:** the Milvus Lite `Method not implemented!` (`AllocTimestamp`) line logged at `ERROR` when any collection is created or dropped is server noise that predates this feature, and is out of scope.
+
+Tests: in-memory grouping with stored products still returns 500; a first Browse request on Milvus creates no `product_groups` collection; `get_all_groups_if_present` returns `[]` without creating the collection and returns stored groups once they exist.
