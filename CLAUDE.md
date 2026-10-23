@@ -29,9 +29,19 @@ python main.py --serve --preload-model    # Pre-warm models before serving
 python main.py --search-image query.jpg   # Image similarity search
 python main.py --search-text "shampoo"    # Text-based search
 
-# Docker (uses Milvus by default, exposes port 8001)
-docker-compose up --build
+# Container (nerdctl compose; Milvus by default, host port 8001 -> container 8000)
+nerdctl compose up -d --build --force-recreate   # build the image and roll out the new code
+nerdctl compose ps                               # wait for the service to report healthy
+curl -s localhost:8001/health                    # {"status":"healthy",...}
+nerdctl compose logs -f                          # follow logs
+nerdctl compose down                             # stop (named volumes app-data/app-uploads keep the data)
 ```
+
+Container gotchas (details in `docs/DOCKER.md`):
+- Plain `up -d --build` does NOT replace a running container when the compose config is unchanged, so the old code keeps serving. Always add `--force-recreate` to roll out.
+- Recreating stops the service for about a minute while models preload. If it fails with `port is already allocated`, run the same command again.
+
+UI checks use a local Playwright MCP server in `.mcp.json` (gitignored; pinned `@playwright/mcp`, headless, isolated profile). Recreate it with `claude mcp add --scope project playwright -- npx -y @playwright/mcp@0.0.83 --headless --isolated`. Claude Code asks to approve it on the first session after it is added, and a running session must be restarted to load it. Point it at `http://localhost:8001` after a rollout.
 
 ## Architecture
 

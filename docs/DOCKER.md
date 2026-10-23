@@ -1,6 +1,36 @@
 # Docker Deployment Guide
 
-## Quick Start
+## Standard way to start and roll out (nerdctl compose)
+
+This project is run with `nerdctl compose` against `docker-compose.yml`. The web UI is on http://localhost:8001 (host 8001 -> container 8000).
+
+```bash
+# Build the image and (re)create the container with the new code
+nerdctl compose up -d --build --force-recreate
+
+# Wait until it is healthy (models preload, about a minute)
+curl -s localhost:8001/health
+
+# Confirm the running container has your code (example)
+nerdctl exec productimageprocesssystem-product-image-processor-1 ls /app/src/web/services
+
+# Logs / stop
+nerdctl compose logs -f
+nerdctl compose down        # keeps the named volumes (app-data, app-uploads)
+```
+
+Things that bit us:
+
+- **`--force-recreate` is required to roll out.** `nerdctl compose up -d --build` rebuilds the image but leaves a running container alone when the compose config is unchanged, so the old code keeps serving. A sign of this: new routes return 404, and a new page path such as `/search/browse` can even return 200 because an older catch-all route (`/search/{session_id}`) matches it.
+- **Recreate can fail with `bind for :8001 failed: port is already allocated`.** The old container is stopped first, and its port is sometimes still held for a moment. Run the same command again.
+- **Rolling out stops the service** for the duration of the recreate plus the model preload. Stored data survives because it lives in the named volumes.
+- **Builds are fast after the first one.** The Dockerfile puts the dependency install and the model download before `COPY . .`, so a code-only change reuses those layers. `.dockerignore` keeps `.mcp.json`, `.playwright-mcp`, `.git` and `*.md` (except `CLAUDE.md`) out of the build context.
+
+## Checking the UI with Playwright MCP
+
+A local, gitignored `.mcp.json` declares a `playwright` MCP server. Create it with `claude mcp add --scope project playwright -- npx -y @playwright/mcp@0.0.83 --headless --isolated`. After a rollout, ask Claude Code to open `http://localhost:8001` with the Playwright tools. A session started before the server was added must be restarted to see it, and Claude Code asks you to approve project MCP servers the first time. Browsers are cached in `~/.cache/ms-playwright`; if one is missing, run `npx playwright install chromium`.
+
+## Quick Start (docker-compose / docker CLI)
 
 ### Using Docker Compose (Recommended)
 
