@@ -20,6 +20,13 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+def create_collection_without_waiting_for_index(client, collection_name, schema, index_params):
+    """create_collection(index_params=...) waits for the index through AllocTimestamp, which Milvus Lite does not implement; its server then logs an ERROR on every create."""
+    client.create_collection(collection_name=collection_name, schema=schema)
+    client.create_index(collection_name=collection_name, index_params=index_params, sync=False)
+    client.load_collection(collection_name)
+
+
 class MilvusVectorLiteDB(VectorDatabase):
     def __init__(
         self,
@@ -139,10 +146,8 @@ class MilvusVectorLiteDB(VectorDatabase):
             index_type="FLAT",
         )
 
-        self._client.create_collection(
-            collection_name=self.collection_name,
-            schema=schema,
-            index_params=index_params,
+        create_collection_without_waiting_for_index(
+            self._client, self.collection_name, schema, index_params
         )
         logger.info(f"Created new collection: {self.collection_name} (model: {self.model_name}, dim: {self.dimension})")
 
@@ -342,10 +347,8 @@ class ProductGroupsDB:
         index_params = self._client.prepare_index_params()
         index_params.add_index(field_name="placeholder_vector", metric_type="IP", index_type="FLAT")
 
-        self._client.create_collection(
-            collection_name=self.collection_name,
-            schema=schema,
-            index_params=index_params,
+        create_collection_without_waiting_for_index(
+            self._client, self.collection_name, schema, index_params
         )
         logger.info(f"Created groups collection: {self.collection_name}")
 

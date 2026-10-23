@@ -57,6 +57,8 @@ class InMemoryMilvusClient:
 
     def __init__(self):
         self.collections = {}
+        self.index_requests = []
+        self.collections_that_waited_for_index = []
 
     def list_collections(self):
         return list(self.collections)
@@ -68,7 +70,12 @@ class InMemoryMilvusClient:
         return SimpleNamespace(add_index=lambda **options: None)
 
     def create_collection(self, collection_name, schema, index_params=None):
+        if index_params is not None:
+            self.collections_that_waited_for_index.append(collection_name)
         self.collections[collection_name] = {"rows": {}, "description": schema.description, "schema": schema}
+
+    def create_index(self, collection_name, index_params, sync=True, **options):
+        self.index_requests.append((collection_name, sync))
 
     def drop_collection(self, collection_name):
         self.collections.pop(collection_name)

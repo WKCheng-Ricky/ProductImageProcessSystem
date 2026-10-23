@@ -37,7 +37,12 @@ class RecordingMilvusClient:
 
     def create_collection(self, collection_name, schema, index_params=None):
         self.created_schema = schema
+
+    def create_index(self, collection_name, index_params, sync=True, **options):
         self.index_params = index_params
+
+    def load_collection(self, collection_name):
+        pass
 
     def insert(self, collection_name, data):
         self.inserted.extend(data)

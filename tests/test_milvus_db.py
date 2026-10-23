@@ -167,3 +167,21 @@ def test_reading_existing_groups_returns_them(groups_db):
     groups_db.insert_group(ProductGroupUUID(group_id="g1", member_ids=["a", "b"], representative_id="a"))
 
     assert [g.group_id for g in groups_db.get_all_groups_if_present()] == ["g1"]
+
+
+def test_collections_are_created_without_waiting_for_the_index(vector_db, groups_db, milvus_client):
+    vector_db.size()
+    groups_db.get_all_groups()
+
+    assert milvus_client.collections_that_waited_for_index == []
+    assert sorted(milvus_client.index_requests) == sorted([
+        (vector_db.collection_name, False),
+        (groups_db.collection_name, False),
+    ])
+
+
+def test_clearing_groups_recreates_the_collection_without_waiting_for_the_index(groups_db, milvus_client):
+    groups_db.clear_all_groups()
+
+    assert milvus_client.collections_that_waited_for_index == []
+    assert milvus_client.index_requests == [(groups_db.collection_name, False)] * 2
