@@ -72,7 +72,7 @@ FastAPI app with session-based multi-page flow. Each uploaded image gets a `sess
 
 Page flow (single image): upload → watermark → quality_basic → quality_aesthetic → split → preprocessing → embedding → search
 
-Additional standalone pages: `/batch/upload`, `/grouping`, `/duplicate`
+Additional standalone pages: `/batch/upload`, `/grouping`, `/duplicate`, `/search/text`, `/search/browse`
 
 All ML operations are called via `src/web/services/pipeline_service.py` which holds a singleton `ProductImagePipeline`. Routes under `src/web/routes/` handle API endpoints (`/api/...`) that the JS frontend calls; page routes in `src/web/app.py` serve HTML templates.
 

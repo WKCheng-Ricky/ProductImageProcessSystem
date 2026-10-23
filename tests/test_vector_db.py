@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from src.pipeline.product_grouper import InMemoryVectorDB
+from src.pipeline.product_grouper import InMemoryVectorDB, VectorDatabase
 
 
 @pytest.fixture
@@ -49,3 +49,18 @@ def test_delete_and_delete_all(db):
 
     db.delete_all()
     assert db.size() == 0
+
+
+def test_get_all_ids_lists_every_inserted_id(db):
+    assert db.get_all_ids() == ["x", "xy", "z"]
+
+
+def test_get_all_ids_drops_deleted_ids(db):
+    db.delete("xy")
+
+    assert db.get_all_ids() == ["x", "z"]
+
+
+def test_base_class_get_all_ids_is_not_implemented():
+    with pytest.raises(NotImplementedError):
+        VectorDatabase().get_all_ids()

@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from src.pipeline.milvus_db import MilvusVectorLiteDB
 from src.web.app import app
+from src.web.services.browse_service import BrowseService
 from src.web.services.pipeline_service import PipelineService
 from src.web.services.session_manager import SessionManager
 from tests.fakes import FAKE_DIMENSION, FakeEmbeddingGenerator, build_fake_model_pipeline, product_photo, two_by_two_collage
@@ -263,3 +264,84 @@ def test_preprocessing_failure_is_a_generic_500(client, pipeline, monkeypatch):
 
     assert response.status_code == 500
     assert "internal detail" not in response.text
+
+
+def test_random_images_returns_stored_images_with_urls(client):
+    run_through_embedding(client, RED, "red")
+    run_through_embedding(client, BLUE, "blue")
+
+    response = client.get("/api/search/random")
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["mode"] == "random"
+    assert body["total_in_db"] == 2
+    assert {image["id"] for image in body["images"]} == {"red", "blue"}
+    assert all(image["image_url"].startswith("/uploads/sessions/") for image in body["images"])
+
+
+def test_random_images_on_an_empty_db_is_an_empty_list(client):
+    response = client.get("/api/search/random")
+
+    assert response.status_code == 200
+    assert response.json()["images"] == []
+    assert response.json()["total_in_db"] == 0
+
+
+@pytest.mark.parametrize("count", [0, 51])
+def test_random_images_rejects_count_outside_one_to_fifty(client, count):
+    assert client.get("/api/search/random", params={"count": count}).status_code == 400
+
+
+def test_random_images_failure_is_a_generic_500(client, monkeypatch):
+    def broken(self, count):
+        raise RuntimeError("secret db path /opt/data")
+
+    monkeypatch.setattr(BrowseService, "sample", broken)
+
+    response = client.get("/api/search/random")
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Error sampling images"
+    assert "secret" not in response.text
+
+
+def test_random_images_uses_groups_on_milvus(milvus_pipeline, client):
+    run_through_embedding(client, RED, "red")
+    run_through_embedding(client, RED_SHADE, "red-shade")
+    run_through_embedding(client, BLUE, "blue")
+    client.post("/api/grouping/run", params={"similarity_threshold": 0.95})
+
+    body = client.get("/api/search/random").json()
+
+    assert body["mode"] == "grouped"
+    assert len(body["images"]) == 2
+    assert body["ungrouped_count"] == 0
+
+
+def test_in_memory_mode_never_opens_the_groups_db(client, monkeypatch):
+    def forbidden(*args, **kwargs):
+        raise AssertionError("opened the groups db")
+
+    monkeypatch.setattr("src.web.services.browse_service.ProductGroupsDB", forbidden)
+    run_through_embedding(client, RED, "red")
+
+    response = client.get("/api/search/random")
+
+    assert response.status_code == 200
+    assert response.json()["mode"] == "random"
+
+
+def test_browse_page_renders_and_is_not_taken_for_a_session(client):
+    response = client.get("/search/browse")
+
+    assert response.status_code == 200
+    assert "/api/search/random" in response.text
+
+
+def test_home_page_links_to_browse(client):
+    assert 'href="/search/browse"' in client.get("/").text
+
+
+def test_by_image_page_links_back_to_browse(client):
+    assert 'href="/search/browse"' in client.get("/search/by-image/red").text

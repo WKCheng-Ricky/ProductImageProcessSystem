@@ -210,3 +210,18 @@ class TextSearchResultsResponse(BaseModel):
     results: List[SearchResultItem]
     total_count: int
     query_text: str
+
+
+class BrowseImageItem(BaseModel):
+    """A stored image offered on the Browse & Search page"""
+    id: str
+    image_url: str
+    original_image_url: Optional[str] = None
+
+
+class RandomImagesResponse(BaseModel):
+    """Images sampled for the Browse & Search page"""
+    images: List[BrowseImageItem]
+    mode: str
+    total_in_db: int
+    ungrouped_count: Optional[int] = None

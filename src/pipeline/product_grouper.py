@@ -81,6 +81,9 @@ class VectorDatabase:
     def get(self, id: str) -> Optional[SearchResult]:
         raise NotImplementedError
 
+    def get_all_ids(self) -> List[str]:
+        raise NotImplementedError
+
 
 class InMemoryVectorDB(VectorDatabase):
     """In-memory vector database (for testing and small-scale applications)"""
@@ -139,6 +142,9 @@ class InMemoryVectorDB(VectorDatabase):
             embedding=self.embeddings[id],
             metadata=self.metadata.get(id),
         )
+
+    def get_all_ids(self) -> List[str]:
+        return list(self.embeddings)
 
     def size(self) -> int:
         return len(self.embeddings)

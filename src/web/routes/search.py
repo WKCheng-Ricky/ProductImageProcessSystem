@@ -14,7 +14,15 @@ import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from src.pipeline.embedding_generator import TextImageEmbeddingGenerator
-from ..models.schemas import SearchResultItem, SearchResultsResponse, TextSearchRequest, TextSearchResultsResponse
+from ..models.schemas import (
+    BrowseImageItem,
+    RandomImagesResponse,
+    SearchResultItem,
+    SearchResultsResponse,
+    TextSearchRequest,
+    TextSearchResultsResponse,
+)
+from ..services.browse_service import build_browse_service
 from ..services.pipeline_service import get_pipeline
 from ..services.session_manager import SessionManager
 
@@ -154,6 +162,34 @@ def search_similar_products(
         results=result_items,
         total_count=len(result_items),
         query_image_url=query_image_url
+    )
+
+
+@router.get("/search/random", response_model=RandomImagesResponse)
+def random_images(count: int = 10):
+    """
+    Sample stored images to start a search from.
+
+    Uses the best image of randomly chosen product groups when grouping has been run,
+    otherwise random images that are not near-duplicates of each other.
+    """
+    if count < 1 or count > 50:
+        raise HTTPException(status_code=400, detail="count must be between 1 and 50")
+
+    try:
+        sample = build_browse_service(get_pipeline()).sample(count)
+    except Exception as e:
+        logger.error(f"Error sampling images: {e}")
+        raise HTTPException(status_code=500, detail="Error sampling images")
+
+    return RandomImagesResponse(
+        images=[
+            BrowseImageItem(id=image.id, image_url=image.image_url, original_image_url=image.original_image_url)
+            for image in sample.images
+        ],
+        mode=sample.mode,
+        total_in_db=sample.total_in_db,
+        ungrouped_count=sample.ungrouped_count,
     )
 
 

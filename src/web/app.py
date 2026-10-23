@@ -197,6 +197,12 @@ async def search_by_image_page(request: Request, image_id: str):
     })
 
 
+@app.get("/search/browse", response_class=HTMLResponse)
+async def search_browse_page(request: Request):
+    """Pick a stored image to start a similarity search from"""
+    return templates.TemplateResponse(request, "browse.html", {})
+
+
 @app.get("/search/text", response_class=HTMLResponse)
 async def search_text_page(request: Request):
     """Text Search Page"""
